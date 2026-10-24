@@ -13,7 +13,7 @@ from vesper.config import StrictModel
 from vesper.core.errors import Code, MCPError
 from vesper.core.registry import new_id
 from vesper.tools.models import Identifier
-from vesper.tools.tweak import Deploy, Verify, validate
+from vesper.tools.tweak import Deploy, validate
 from vesper.workflows.deployment import DeploymentService
 
 
@@ -115,30 +115,9 @@ class DevelopWorkflow:
             return self.save(report, "deployment_failed")
         report["deployment_results"] = record
         report["session_id"] = record["session_id"]
-        self.save(report, "verifying")
-        try:
-            verification_request = Verify(deployment_id=record["deployment_id"], session_id=record["session_id"], accessibility_identifier=original["accessibility_identifier"], expected_title=original["replacement_title"])
-            for attempt in range(12):
-                evidence = await deployment.verify(verification_request)
-                report["verification"] = evidence
-                if evidence["verified"] or evidence["crashes"]:
-                    break
-                if attempt < 11:
-                    await asyncio.sleep(0.5)
-            report["logs"] = await deployment.logs(record["deployment_id"])
-            if report["verification"]["verified"]:
-                report["success"] = True
-                return self.save(report, "verified")
-            report["failure_diagnosis"] = {key: report["verification"].get(key) for key in ("loaded", "hook_invoked", "behavior_observed", "crashes")}
-        except BaseException as exc:
-            report["verification_error"] = {"type": type(exc).__name__, "message": str(exc)[:1000]}
-            report["rollback"] = await asyncio.shield(deployment.rollback_after_verification(record))
-            self.save(report, "cancelled" if isinstance(exc, asyncio.CancelledError) else "verification_failed")
-            if isinstance(exc, asyncio.CancelledError):
-                raise
-            return report
-        report["rollback"] = await deployment.rollback_after_verification(record)
-        return self.save(report, "verification_failed")
+        report["success"] = True
+        report["next_action"] = "Test the requested change on the device with ui_automate/ui_capture; do not add backups, local tests, or loaded-module checks."
+        return self.save(report, "installed")
 
     async def prepare(self, report: dict[str, Any], request: DevelopRequest) -> None:
         assert request.device_id and request.bundle_id and request.accessibility_identifier
@@ -153,7 +132,6 @@ class DevelopWorkflow:
         report["target_application"] = {**report["target_application"], "application": target, "device": device}
         async def rpc(method: str, args: dict[str, Any]) -> dict[str, Any]:
             return await self.app.frida.rpc(device_id, session_id, method, args)
-        snapshot = await rpc("snapshot", {"depth": 8, "max_nodes": 500, "limit": 100, "include_text": False})
         found = await rpc("find_views", {"accessibility_identifier": request.accessibility_identifier, "depth": 20, "max_nodes": 1500, "limit": 100, "include_text": True})
         if len(found.get("views", [])) != 1:
             raise MCPError(Code.INVALID_INPUT, "Accessibility identifier must resolve to one observed button", matches=len(found.get("views", [])))
@@ -163,7 +141,7 @@ class DevelopWorkflow:
         class_name = button["controller"]["class_name"]
         method = await rpc("get_method_implementation", {"class_name": class_name, "selector": "viewDidAppear:", "class_method": False})
         report["inspected_classes_and_methods"] = [{"class_name": class_name, "method": method, "button_actions": button.get("targets", [])}]
-        report["evidence"].extend([{"source": "UIKit snapshot", "observed": True, "data": snapshot}, {"source": "UIButton target-action and responder chain", "observed": True, "data": button}, {"source": "Objective-C method metadata", "observed": True, "data": method}])
+        report["evidence"].extend([{"source": "UIButton target-action and responder chain", "observed": True, "data": button}, {"source": "Objective-C method metadata", "observed": True, "data": method}])
         report["baseline_title"] = button.get("text")
         environment = self.app.theos.environment()
         identity = await rpc("identity", {})
@@ -204,4 +182,4 @@ def register(app: Application) -> None:
         if request.background:
             return app.jobs.start("develop_tweak", lambda: DevelopWorkflow(app).run(request))
         return await DevelopWorkflow(app).run(request)
-    app.tools.add("develop_tweak", DevelopRequest, develop, "Inspect one target button, validate a controller lifecycle ABI, generate/build a Logos title tweak, pause for exact installation approval, then deploy, observe behavior and roll back failures. Resume with workflow_id and operator-granted approval_id.", read_only=False, timeout=app.settings.build_timeout * 4 + 300)
+    app.tools.add("develop_tweak", DevelopRequest, develop, "Inspect one target button, generate/build a Logos title tweak, then install and restart. Returns the session for minimal on-device UI testing. No backups, local test suites, loaded-marker checks or automatic rollback. Resume approval with workflow_id and approval_id.", read_only=False, timeout=app.settings.build_timeout * 4 + 300)

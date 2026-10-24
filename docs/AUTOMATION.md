@@ -123,17 +123,5 @@ NSString/NSNumber、NSArray/NSDictionary、NSData 长度按需有界序列化；
 前者的 choose 回调同步执行，因此采集及 retain 保持在同一主线程租约内；后者使用 XCTest，
 本实现沿用用户选择的 Frida 方案，没有引入 XCTest/WDA 设备依赖。
 
-`npm test` 执行生产 TypeScript 的对象租约、UIKit 操作、等待/取消及值读取逻辑；Python 测试覆盖
-会话复用、进程变化、MCP 原生图片、单 RPC 批次和缓存分页。真机只读验证脚本：
-
-```sh
-PYTHONPATH=src .venv/bin/python scripts/verify_runtime.py \
-  --config vesper.local.toml --device test --bundle dev.iosdecompiler.fixture \
-  --samples 20 --output .vesper/benchmarks/runtime.json
-```
-
-当前实测覆盖具体 ivar、堆发现、混合对象、零 RPC 分页、只读断言/等待和原生图片。
-真机抖音 40.7.0 已验证滚动 Feed 前后切换图文/视频，复用会话；视频控制器的
-`isPlaying` 与 `currentPlaybackTime` 用于核实播放，而不只判断 contentOffset。
-输入的 UIKit 行为仍只经过生产代码单元测试。真机验证结果与性能详情见
-[采集性能报告](CAPTURE_PERFORMANCE.md)。
+默认只在真机操作当前修改涉及的控件。不要追加本地冒烟、采样或长回归；
+首次关键失败后停止并修正。

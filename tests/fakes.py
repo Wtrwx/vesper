@@ -48,6 +48,11 @@ class FakeSSH:
         self.installed = {"build": build, "metadata": metadata}
         return {"exit_status": 0, "stdout": "installed", "stderr": ""}
 
+    async def restart_app(self, device_id, bundle_id, pid):
+        self.mutations.append("ssh_restart")
+        self.app.frida._start_process()
+        return {"bundle_id": bundle_id, "restarted": True, "backend": "ssh"}
+
     async def uninstall(self, device_id, package_id):
         self.mutations.append("uninstall")
         self.installed = None
@@ -96,6 +101,9 @@ class FakeFrida:
 
     async def spawn(self, device_id, bundle_id):
         self.ssh.mutations.append("launch")
+        return self._start_process()
+
+    def _start_process(self):
         self.pid += 1
         self.loaded = self.ssh.installed
         self.title = "Original"

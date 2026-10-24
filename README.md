@@ -36,7 +36,7 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 | Decryption / headers | Reused-session frida-ios-dump, verified Mach-O, actual classdumpc or runtime headers | `app_decrypt`, `objc_dump` |
 | Dynamic analysis | Persistent Frida sessions, observation hooks, bounded events and call stacks | `frida_attach`, `frida_trace_method`, `frida_get_events` |
 | Static analysis | Optional headless IDA, disassembly, Hex-Rays pseudocode, cross-references, runtime address correlation | `ida_open_binary`, `ida_decompile`, `ida_resolve_runtime_address` |
-| Tweak development | Editable Logos projects, ABI validation, Theos builds, approved deployment, verification and rollback | `tweak_create_project`, `tweak_build`, `tweak_deploy` |
+| Tweak development | Editable Logos projects, ABI validation, Theos builds, direct installation and app restart | `tweak_create_project`, `tweak_build`, `tweak_deploy` |
 | Workflows | Button-title tweak workflow, persistent reports, background jobs and cancellation | `develop_tweak`, `job_status`, `job_cancel` |
 
 See the [tool reference](docs/TOOLS.md) for the complete catalog and required fields.
@@ -116,10 +116,10 @@ Configure your MCP client to launch this command with absolute paths. Stdout
 carries the MCP protocol; diagnostics go to stderr. See [client setup](docs/CLIENTS.md)
 for Codex, Claude Code and Cursor examples.
 
-The default `tool_profile="focused"` advertises 19 common tools. Advanced
+The default `tool_profile="focused"` advertises 20 common tools. Advanced
 primitives remain available through `platform_tool`: request one schema with
 `action="schema"`, then call it with `arguments`. `tool_profile="full"` advertises
-all 70 primitives. Copy `skills/vesper-ios` into your agent skill directory
+all 71 primitives. Copy `skills/vesper-ios` into your agent skill directory
 (for Codex, `~/.codex/skills/vesper-ios`) to load workflows on demand.
 
 Structured results are returned once in `structuredContent`, with a short text
@@ -142,8 +142,7 @@ tools such as `server_status`. The server itself does not require a model API ke
 Optional header dumping uses host `classdumpc` (PATH or the `classdumpc` setting).
 Optional stopped inspection needs host LLDB and device debugserver; `debug_setup`
 checks components and installs missing debugserver from local Apple iOS support.
-See [decryption and analysis pipelines](docs/DECRYPTION.md) and
-[measured performance](docs/CAPTURE_PERFORMANCE.md).
+See [decryption and analysis pipelines](docs/DECRYPTION.md) for runtime and offline workflows.
 
 ## Demos
 
@@ -268,7 +267,7 @@ Images are saved under `<state_dir>/screenshots/`. Capture is limited to the
 selected application's renderable window; system overlays and some protected
 or GPU-rendered content may be absent.
 
-### Build and verify a button-title tweak
+### Build and install a button-title tweak
 
 The [UIKit fixture](examples/UIKitFixture/README.md) provides a button with
 accessibility identifier `fixture.button` and an Objective-C action. Build,
@@ -297,16 +296,16 @@ terminal. Use the report's approval ID and the server's absolute state directory
 ```
 
 Resume `develop_tweak` with `workflow_id` and the granted `approval_id`.
-Deployment verification checks the loaded build identity, hook invocation,
-observed title and available crash evidence. Uninstallation or a separate
-rollback operation requests its own approval.
+After installation succeeds, restart through SSH with `app_restart` (already
+included by `restart=true`) and use Frida/`ui_automate` to exercise the requested
+change. Do not create backups, add local/smoke/long regression tests, or compare
+loaded modules, build markers, UUIDs or installed-file hashes. Inspect installation
+identity or crash reports only when diagnosing a relevant failure. Stop on the
+first important failure and fix it before continuing.
 
-For the complete interactive inspect → build → approved install → verify →
-approved uninstall → restore demo:
-
-```sh
-PYTHONPATH=src .venv/bin/python examples/demo.py --config vesper.local.toml --device test
-```
+Complete supported build/install/restart/UI operations yourself. No VNC service
+is needed. After user acceptance, finish the authorized commit/push without
+adding more checks or repeatedly polling CI.
 
 ## Project structure
 
@@ -322,7 +321,7 @@ vesper/
 │   └── assets/          # Bundled Frida agent and license notices
 ├── agents/frida/        # Device-side TypeScript source
 ├── examples/            # Configuration, UIKit fixture and demo
-├── scripts/             # Build, documentation and verification utilities
+├── scripts/             # Build and documentation utilities
 ├── tests/
 ├── docs/
 ├── pyproject.toml
@@ -331,36 +330,29 @@ vesper/
 
 ## Development
 
-```sh
-uv sync --frozen --all-extras --no-editable
-npm ci --ignore-scripts
-npm run typecheck
-npm run build
-npm test
-.venv/bin/ruff check src tests scripts examples/demo.py
-.venv/bin/mypy
-.venv/bin/pytest -q
-uv build
-```
+For app/tweak work, use this default flow:
 
-The agent build uses the official compiler exposed by Frida Python and bundles
-`frida-objc-bridge`. After changing Python source or rebuilding the agent,
-refresh the non-editable installation before using the installed command:
+**Locate the issue → smallest change → build → install → focused device check → authorized commit/push.**
+
+Do not create backups or add local test suites, smoke tests, long regressions,
+sampling campaigns or test reports to that flow. Reuse what has already been
+read; inspect relevant differences instead of rereading entire files. Read only
+the target controls and capture an image when reproducing a visual issue,
+checking its fix, or diagnosing an exception. Do not continue checking after
+acceptance without a new change, failure or user request.
+
+For Vesper code changes, use only the smallest relevant existing test. The
+lightweight CI builds the package and runs the deployment/restart tests once.
+
+After changing Python source, update the installed MCP directly:
 
 ```sh
 uv sync --frozen --all-extras --no-editable --reinstall-package vesper
-.venv/bin/python scripts/smoke_stdio.py
 ```
 
-For a source run, use
-`PYTHONPATH=src .venv/bin/python -m vesper.server --config /absolute/config.toml`.
-Regenerate the tool catalog with
+Rebuild the bundled agent with `npm ci --ignore-scripts && npm run build` only
+when its TypeScript source changes. Generate tool documentation with
 `PYTHONPATH=src .venv/bin/python scripts/document_tools.py`.
-
-Unit and integration tests substitute external device, compiler and IDA
-boundaries where needed. SSH/SFTP integration tests use a local loopback server.
-Hardware demos require a configured device; optional toolchain checks are
-available in `scripts/verify_theos.py` and `scripts/verify_ida.py`.
 
 ## Security and scope
 
@@ -390,9 +382,8 @@ Keep local configs, keys, state databases, traces and screenshots private. See
 
 Issues and pull requests are welcome. Include the relevant host, iOS, jailbreak,
 Frida and toolchain versions when reporting a problem, with sensitive data
-removed. Keep changes focused, add meaningful tests for behavior changes, run
-the relevant development checks, and update both READMEs when changing user-facing
-behavior. Add new tools to the generated reference.
+removed. Keep changes focused, use minimal relevant checks, and update both READMEs
+when changing user-facing behavior. Add new tools to the generated reference.
 
 ## License
 

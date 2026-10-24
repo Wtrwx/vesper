@@ -5,99 +5,71 @@ description: Use Vesper for iOS reverse engineering, UIKit automation, live Obje
 
 # Vesper iOS
 
-Use the connected `vesper` MCP server. Work with the configured device and app;
-reuse their session. Vesper's focused catalog exposes the common operations.
-For an advanced primitive, request its exact schema with
-`platform_tool(name="…", action="schema")`, then call it through
-`platform_tool(name="…", arguments={…})`. Load only the schema needed now;
-`tool_profile="full"` is available for clients that need the entire catalog.
+Use the connected `vesper` MCP server and reuse the configured app session.
+Load advanced schemas only when needed with `platform_tool(name="…", action="schema")`,
+then call `platform_tool(name="…", arguments={…})`.
 
-## Choose the least expensive observation
+## Default workflow
 
-- Current controls: `ui_capture(device_id, bundle_id, mode="summary")`.
-  Text requires `include_text=true`. PNG requires `mode="screenshot"` or `"both"`.
-  No preliminary enumeration, attach, or window query is needed.
-- Read `next_cursor` from the same snapshot with `ui_snapshot`; this is a host
-  cache read. Omit `snapshot_id` to observe the current UI after a change.
-- Read selected instance parameters with `objc_query_instances(object_ids=[…],
-  field_names=[…])`. Prefer leased handles already observed in the UI. Class-name
-  heap discovery is useful when no handle exists, but costs more and may pause
-  the app. Page its snapshot without scanning again. Expired handles require a
-  fresh observation, rather than retaining everything indefinitely.
-- Request controller ownership, constraints, targets, inherited methods or
-  nested values only when they resolve the current question.
+只做最小必要检查。不要创建备份，不要增加或运行额外的本地测试、冒烟测试、长回归或测试报告。
+编译成功后直接安装，通过 SSH 重启目标 App，再用 Frida 操作 App，实测当前修改即可。
+安装命令成功即视为安装完成；不要再核对进程中加载的模块、构建标记、包版本或逐字节哈希。
+能由 AI 完成的编译、安装、重启、点击、返回、输入、滑动和读日志，都由 AI 完成，不要转交用户手动操作。
+复用已读信息，只取相关差异和必要行。默认只查目标控件，截图限于复现、修复后和异常节点。
+首次关键失败立即停止并修正。只有安装异常、明确怀疑旧版本或出现崩溃症状时，才做对应排障。
+用户验收后直接完成已授权的提交、推送，不追加检查，不持续跟踪普通推送的 CI；查询时使用完整 SHA。
+没有新改动、新失败或用户明确要求，不扩展测试和收尾流程。
 
-## Automate a test
+For tweak work: build → install directly → `app_restart` → minimal Frida/UI
+exercise of the requested change. Do not create backups or add local test suites,
+smoke tests, broad regressions, loaded-module comparisons, build-marker checks
+or post-install hash comparisons. A successful install command completes installation.
+Do not ask the user to operate the app when the available tools can do it.
 
-Batch related `tap`, `back`, `input_text`, `scroll`, `assert`, and `wait_for`
-steps in `ui_automate`; use one `after_capture` when a final observation helps.
-Prefer a leased view ID or a unique accessibility selector. Match by class/text
-only after observing the actual UI; text selectors require explicit text reads.
-The batch stops at its first failure. An uncertain timeout can occur after an
-action took effect: inspect the current UI before deciding whether to repeat it.
+`app_restart(device_id, bundle_id)` restarts through SSH `uiopen` and returns a
+fresh Frida session; it falls back to the existing Frida launcher if `uiopen` is
+missing. Deployment with `restart=true` includes this step. For local or SSH
+build commands, read [references/ssh-tweaks.md](references/ssh-tweaks.md).
 
-UIKit actions dispatch controls/accessibility, pop/dismiss controllers, set text
-with change events, and adjust scroll offsets. They do not synthesize raw HID
-touches, gesture trajectories, or keyboard composition. A custom gesture-only
-view can be inspected but may require an existing test hook for activation.
-For a vertical paged feed, use `scroll` with `pages=1` (next) or `pages=-1`
-(previous), optionally `animated=true` and a bounded `settle_ms`. The device
-reads its current viewport height; do not hardcode screen pixels or Tab Bar
-height. Reuse the observed scroll view ID to avoid another tree search. Verify
-page identity/playback where relevant; content offsets alone do not prove play.
-`performed=false, at_boundary=true` means the loaded content cannot move farther;
-stop or wait for an observed content update. Do not count boundary calls as pages.
+## Observe and operate with few calls
 
-For a tweak regression, observe the relevant property/action before and after
-the change, then assert the expected state. For builds/deployment, read
-[references/tweaks.md](references/tweaks.md). Report the observed behavior;
-successful compilation or package installation alone does not verify a tweak.
+- `ui_capture(device_id, bundle_id, mode="summary")` finds/reuses the session.
+  Text requires `include_text=true`; images require `mode="screenshot"` or `"both"`.
+- Read subsequent `ui_snapshot` pages with the returned cursor. Omit
+  `snapshot_id` for a fresh observation after changing the UI.
+- Batch related `tap`, `back`, `input_text` and `scroll` steps in `ui_automate`.
+  Prefer observed view IDs or unique selectors and one final `after_capture`.
+  An uncertain timeout may follow a completed action: observe before retrying.
+- For a paged feed, `scroll` with `pages=1` advances and `pages=-1` goes back.
+  Reuse the scroll view ID; add `animated`/`settle_ms` only when necessary.
+- `objc_query_instances(object_ids=[…], field_names=[…])` reads selected values
+  without scanning the heap. Use class-name discovery only when no handle exists.
+  Request controllers, constraints, targets or nested values only as needed.
 
-## Choose a metadata backend
+UIKit operations run on the main thread. This backend dispatches control and
+accessibility actions, navigation and scroll offsets; it does not inject raw HID
+touches. Use an available app action for a gesture-only view. Keep the existing
+Frida deployment; do not install VNC or another screen-control service by default.
 
-`objc_dump` automatically chooses `classdumpc` for a local `binary_path`, or
-runtime for `device_id`, `bundle_id`, and `class_name`.
+## Metadata and analysis
 
-- Use classdumpc for offline Mach-O headers without device work. Set `class_name`
-  or `class_filter` when possible. It returns a local file; `preview_chars` is
-  opt-in. This is the host **classdumpc**, not class-dump/classdump-ios.
-- Use runtime for loaded/decrypted classes, current method encodings and live
-  object values. Static headers cannot provide current instance parameters.
-  An encrypted/stripped file may require runtime metadata.
-- For offsets, methods or ownership, load only the needed `objc_get_*` or
-  `ui_inspect_view` schema through `platform_tool`.
+`objc_dump(binary_path=…)` uses host **classdumpc** for offline headers;
+`objc_dump(device_id=…, bundle_id=…, class_name=…)` uses runtime metadata.
+Use runtime queries for current instance values. Keep headers local and request
+only relevant classes or fields.
 
-## Combine decryption, headers and disassembly
+For encrypted images, chain `app_decrypt` → classdumpc for headers or
+`app_decrypt` → IDA/Hex-Rays for implementation logic. Read
+[references/analysis-pipelines.md](references/analysis-pipelines.md) when needed.
 
-For encrypted app binaries, use `app_decrypt` with an observed loaded module.
-The result is a local verified Mach-O, not a header or IPA. Chain its
-`binary_path` into classdumpc or IDA according to the question. Read
-[references/analysis-pipelines.md](references/analysis-pipelines.md) for
-decryption → classdumpc → IDA → runtime workflows and identity checks.
+## Debug and logs
 
-## Debug and collect logs
+Use `debug_inspect` with the default Frida backend for stacks/registers, or
+`backend="lldb"` for stopped frames/locals. If a required component is missing,
+use `debug_setup(action="check")` and its installation hints; matching local
+Apple support can supply debugserver through `action="install"`.
 
-Use `debug_inspect` with the default Frida backend for immediate threads,
-registers and bounded stacks. These sample running threads; they are not a
-consistent stop of the entire process. Select `backend="lldb"` for stopped
-inspection and locals. LLDB detaches/resumes after the bounded request.
-
-If a required component is missing, use `debug_setup(action="check")` and follow
-its `next_actions`/component `install_hint` for the selected backend. Device
-debugserver can be installed with `debug_setup(action="install")` from matching
-local Apple device support. `repair` reuses a device-provided signing profile.
-Installed components do not prove attachment works: verify with an inspection.
-Keep the existing Frida deployment/version pairing.
-
-For logs, start `app_logs` once, read with `after=next_cursor` and a narrow
-`contains`/`level` filter, then stop the stream when finished. An active stream
-pins its session. The device ring and each page are bounded. `os_log`/`NSLog`
-records may contain format strings rather than expanded arguments; do not
-infer values from placeholders. Read
-[references/debugging.md](references/debugging.md) for backend failure handling.
-For SSH build/install/debug and alternatives when LLDB cannot attach, read
-[references/ssh-tweaks.md](references/ssh-tweaks.md).
-
-Use native MCP image content for display. Keep full headers/log files local;
-return selected findings and paths. Measure actual response bytes when reporting
-token savings; distinguish server time, MCP round trips and model/viewer waits.
+Start `app_logs` once, filter by cursor/level/text, and stop it when finished.
+If LLDB cannot attach, continue with Frida and logs instead of repeated setup.
+Read [references/debugging.md](references/debugging.md) only for a backend failure.
+Return concise findings and native MCP images; keep full dumps/logs local.

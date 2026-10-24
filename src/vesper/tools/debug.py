@@ -86,4 +86,4 @@ def register(app: Application) -> None:
         'Check required Frida/LLDB/debugserver components and return actionable missing-component instructions. '
         'action=install installs absent device debugserver from the matching local Xcode iOS image or a workspace '
         'local_debugserver_path. action=repair reapplies an existing device-provided signing profile. '
-        'Installation checks execution; verify actual attach separately with debug_inspect(backend=lldb).', read_only=False)
+        'Use the existing Frida backend if LLDB cannot attach.', read_only=False)

@@ -25,5 +25,6 @@ using the jailbreak's documented procedure. Launch **Decompiler Fixture** once.
 
 Configure SSH and Frida, allowlist `dev.iosdecompiler.fixture`, then run
 `PYTHONPATH=src .venv/bin/python examples/demo.py --config vesper.local.toml --device test`.
-The demonstration requests separate operator approvals for deployment/restart and
-uninstallation/restart, and asserts that the final title is `Original`.
+The demonstration builds and installs the tweak, restarts the app, then reads
+the target button once. It leaves the tweak installed and creates no backup or
+additional regression campaign.

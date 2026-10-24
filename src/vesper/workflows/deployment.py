@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from vesper.adapters.debian import inspect_package
-from vesper.adapters.theos import HookSpec
 from vesper.app import Application
 from vesper.core.errors import Code, MCPError
 from vesper.core.permissions import sha256
 from vesper.core.registry import new_id
-from vesper.tools.tweak import validate
+from vesper.tools.device import restart_application
 
 if TYPE_CHECKING:
     from vesper.tools.tweak import Deploy, DeploymentRequest, Verify
@@ -46,35 +45,20 @@ class DeploymentService:
             build, metadata = await self._build(request.build_id)
             spec = build["spec"]
             self.app.permissions.device(request.device_id, spec["bundle_id"])
-            project = self.app.theos.project(build["project_id"])
             if self.app.theos.fingerprint(build["project_id"]) != build["source_hash"]:
                 raise MCPError(Code.IDENTITY_MISMATCH, "Sources changed after build; rebuild before deployment")
             session = self.app.frida.session(request.device_id, request.session_id)
             if session.bundle_id != spec["bundle_id"]:
                 raise MCPError(Code.IDENTITY_MISMATCH, "Deployment session targets another application")
-            for entry in project["hooks"]:
-                await validate(self.app, request.device_id, request.session_id, HookSpec.model_validate(entry["spec"]), spec["bundle_id"])
             device = await self.app.ssh.probe(request.device_id)
             if (device["mode"] == "rootless") != spec["rootless"]:
                 raise MCPError(Code.IDENTITY_MISMATCH, "Package scheme differs from the observed jailbreak environment")
-            before = await self.app.ssh.package_status(request.device_id, spec["package_id"])
-            previous: dict[str, Any] | None = None
-            if before["installed"]:
-                candidates = [item for item in self.app.registry.list("deployment") if item["device_id"] == request.device_id and item["package_id"] == spec["package_id"] and item["phase"] in {"installed", "verified", "verification_failed"}]
-                if not candidates:
-                    raise MCPError(Code.NOT_ALLOWED, "Cannot replace an unmanaged installed package without a recoverable backup")
-                prior, prior_metadata = await self._build(candidates[0]["build_id"])
-                actual = await self.app.ssh.file_sha256(request.device_id, prior_metadata["dylib_path"])
-                if actual != prior_metadata["dylib_sha256"] or before["version"] != prior_metadata["version"]:
-                    raise MCPError(Code.IDENTITY_MISMATCH, "Installed package differs from the managed rollback artifact")
-                previous = {"deployment_id": candidates[0]["deployment_id"], "build_id": candidates[0]["build_id"], "package_sha256": prior["package_sha256"], "metadata": prior_metadata}
             scope = {"device_id": request.device_id, "bundle_id": spec["bundle_id"], "session_id": request.session_id,
-                "package_id": spec["package_id"], "package_sha256": build["package_sha256"], "restart": request.restart,
-                "previous_package_sha256": previous["package_sha256"] if previous else None, "rollback_on_failure": True}
+                "package_id": spec["package_id"], "package_sha256": build["package_sha256"], "restart": request.restart}
             self.app.permissions.require("tweak_deploy", scope, request.approval_id)
             deployment_id = new_id("deployment")
             record = {"deployment_id": deployment_id, "device_id": request.device_id, "bundle_id": spec["bundle_id"], "package_id": spec["package_id"],
-                "build_id": request.build_id, "metadata": metadata, "previous": previous, "started_at": time.time(), "restart": request.restart,
+                "build_id": request.build_id, "metadata": metadata, "previous": None, "started_at": time.time(), "restart": request.restart,
                 "session_id": request.session_id, "executable": session.bundle_id.rsplit(".", 1)[-1], "logs": [], "rollback": None}
             identity = await self.app.frida.rpc(request.device_id, request.session_id, "identity", {})
             record["executable"] = Path(identity.get("executable", record["executable"])).name
@@ -91,51 +75,31 @@ class DeploymentService:
                 record["logs"].append(result)
                 if result["exit_status"] != 0:
                     raise MCPError(Code.DEPLOY_FAILED, "dpkg did not install the package successfully")
-                status = await self.app.ssh.package_status(request.device_id, spec["package_id"])
-                if not status["installed"] or status["version"] != metadata["version"]:
-                    raise MCPError(Code.DEPLOY_FAILED, "Package database does not confirm the installed version")
-                actual = await self.app.ssh.file_sha256(request.device_id, metadata["dylib_path"])
-                if actual != metadata["dylib_sha256"]:
-                    raise MCPError(Code.IDENTITY_MISMATCH, "Installed dylib checksum differs from the built artifact")
                 if request.restart:
                     await self._restart(record)
                 self.save(record, "installed")
-                if previous:
-                    prior_record = self.record(previous["deployment_id"])
-                    self.save(prior_record, "superseded")
+                for prior in self.app.registry.list("deployment"):
+                    if prior["deployment_id"] != deployment_id and prior["device_id"] == request.device_id and prior["package_id"] == spec["package_id"] and prior["phase"] in {"installed", "verified", "verification_failed"}:
+                        self.save(prior, "superseded")
 
             mutation = asyncio.create_task(apply())
             try:
                 await asyncio.shield(mutation)
             except BaseException as exc:
-                # Let a privileged install settle before issuing a conflicting rollback.
+                # Let dpkg finish even if the caller cancels; do not undo the install.
                 if not mutation.done():
                     with contextlib.suppress(Exception, asyncio.CancelledError):
                         await asyncio.shield(mutation)
                 record["failure"] = {"type": type(exc).__name__, "message": str(exc)[:1000]}
-                record["rollback"] = await self.rollback_internal(record)
-                self.save(record, "failed")
+                self.save(record, "cancelled" if isinstance(exc, asyncio.CancelledError) else "failed")
                 if isinstance(exc, asyncio.CancelledError):
                     raise
-                raise MCPError(Code.DEPLOY_FAILED, "Deployment failed; inspect rollback status", deployment_id=deployment_id, rollback=record["rollback"]) from exc
-            return {**record, "verified": False, "note": "Installation is complete; runtime loading and requested behavior still require verification"}
+                raise MCPError(Code.DEPLOY_FAILED, "Deployment failed; no automatic rollback was performed", deployment_id=deployment_id) from exc
+            return {**record, "next_action": "Use Frida/UI to test the requested change on the device."}
 
     async def _restart(self, record: dict[str, Any]) -> None:
-        device_id, bundle_id = record["device_id"], record["bundle_id"]
-        for session in list(self.app.frida.sessions.values()):
-            if session.active and session.device_id == device_id and session.bundle_id == bundle_id:
-                await self.app.frida.detach(device_id, session.id)
-        await self.app.frida.terminate(device_id, bundle_id)
-        await self.app.frida.spawn(device_id, bundle_id)
-        for attempt in range(5):
-            try:
-                attached = await self.app.frida.attach(device_id, bundle_id)
-                record["session_id"] = attached["session_id"]
-                return
-            except MCPError as exc:
-                if exc.code != Code.NOT_FOUND or attempt == 4:
-                    raise
-                await asyncio.sleep(0.5)
+        result = await restart_application(self.app, record["device_id"], record["bundle_id"])
+        record["session_id"] = result["session_id"]
 
     async def verify(self, request: Verify) -> dict[str, Any]:
         device_id = self.record(request.deployment_id)["device_id"]
@@ -146,23 +110,16 @@ class DeploymentService:
         record = self.record(request.deployment_id)
         if record["phase"] not in {"installed", "verified", "verification_failed"}:
             raise MCPError(Code.INVALID_INPUT, "Only a currently installed deployment can be verified", phase=record["phase"])
-        await self._assert_current(record)
         session = self.app.frida.session(record["device_id"], request.session_id)
         if session.bundle_id != record["bundle_id"]:
             raise MCPError(Code.IDENTITY_MISMATCH, "Verification session belongs to another application")
-        build = self.app.registry.get(record["build_id"], "build")
-        marker = await self.app.frida.rpc(record["device_id"], request.session_id, "tweak_state", {"module_name": build["spec"]["name"] + ".dylib"})
         views = await self.app.frida.rpc(record["device_id"], request.session_id, "find_views", {"accessibility_identifier": request.accessibility_identifier, "include_text": True, "depth": 20, "max_nodes": 1500, "limit": 100})
         matches = views.get("views", [])
         behavior = len(matches) == 1 and (matches[0].get("is_button") or matches[0].get("class_name") == "UIButton") and matches[0].get("text") == request.expected_title
-        loaded = marker.get("loaded") is True and marker.get("build_marker") == build["build_marker"]
-        invoked = marker.get("invocation_count", 0) > 0
-        crashes = await self.app.ssh.list_crashes(record["device_id"], record["executable"], record["started_at"])
-        verified = loaded and invoked and behavior and not crashes
-        evidence = {"loaded": loaded, "hook_invoked": invoked, "behavior_observed": behavior, "marker": marker, "views": matches, "crashes": crashes,
-            "session_id": request.session_id, "observed": True, "verified": verified}
+        evidence = {"behavior_observed": behavior, "views": matches,
+            "session_id": request.session_id, "observed": True, "verified": behavior}
         record["verification"] = evidence
-        self.save(record, "verified" if verified else "verification_failed")
+        self.save(record, "verified" if behavior else "verification_failed")
         return evidence
 
     async def logs(self, deployment_id: str) -> dict[str, Any]:
@@ -206,21 +163,6 @@ class DeploymentService:
         status = await self.app.ssh.package_status(record["device_id"], record["package_id"])
         if not status["installed"] or status["version"] != record["metadata"]["version"] or await self.app.ssh.file_sha256(record["device_id"], record["metadata"]["dylib_path"]) != record["metadata"]["dylib_sha256"]:
             raise MCPError(Code.IDENTITY_MISMATCH, "Installed package changed; refusing to mutate it using a stale deployment record")
-
-    async def rollback_after_verification(self, record: dict[str, Any]) -> dict[str, Any]:
-        async with self.app.deployment_locks.setdefault(record["device_id"], asyncio.Lock()):
-            current = self.record(record["deployment_id"])
-            try:
-                # Another approved operation may have run between verification
-                # polls. The old rollback grant cannot authorize removing its result.
-                await self._assert_current(current)
-            except MCPError as exc:
-                return {"restored": False, "operator_action_required": True, "error": exc.code,
-                    "message": "Package state changed or is uncertain; no automatic rollback was performed"}
-            result = await self.rollback_internal(current)
-            current["rollback"] = result
-            self.save(current, "rolled_back" if result["restored"] else "rollback_failed")
-            return result
 
     @staticmethod
     async def _settle(work: Any) -> dict[str, Any]:

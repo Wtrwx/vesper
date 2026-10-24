@@ -261,6 +261,25 @@ class SSHAdapter:
     async def uninstall(self, device_id: str, package_id: str) -> dict[str, Any]:
         return await self._run(device_id, shlex.join(["dpkg", "--remove", package_id]), timeout=120)
 
+    async def restart_app(self, device_id: str, bundle_id: str, pid: int | None) -> dict[str, Any]:
+        if bundle_id not in self.settings.devices[device_id].allowed_apps or (pid is not None and pid <= 1):
+            raise MCPError(Code.NOT_ALLOWED, "Restart requires an allowed app and its observed PID")
+        # Check the launcher before stopping the process so a missing component
+        # can fall back to the existing Frida deployment without interrupting it.
+        command = "command -v uiopen >/dev/null 2>&1 || exit 127; "
+        if pid:
+            command += (
+                f"kill -9 {int(pid)} 2>/dev/null || true; "
+                f"attempt=0; while kill -0 {int(pid)} 2>/dev/null; do "
+                'attempt=$((attempt + 1)); [ "$attempt" -lt 30 ] || exit 124; sleep 0.1; done; '
+            )
+        result = await self._run(device_id, command + "exec " + shlex.join(["uiopen", "-b", bundle_id]), timeout=10)
+        if result["exit_status"] == 127:
+            raise MCPError(Code.UNAVAILABLE, "SSH app launcher uiopen is unavailable; use the existing Frida launcher")
+        if result["exit_status"] != 0:
+            raise MCPError(Code.SSH_ERROR, "SSH app restart failed", exit_status=result["exit_status"], stderr=result["stderr"][:1000])
+        return {"bundle_id": bundle_id, "restarted": True, "backend": "ssh"}
+
     @transfer_errors
     async def file_sha256(self, device_id: str, remote_path: str) -> str:
         connection = await self.connect(device_id)

@@ -16,7 +16,7 @@ FOCUSED_TOOLS = frozenset({
     'ui_automate', 'objc_dump', 'objc_query_instances', 'app_logs', 'debug_inspect',
     'debug_setup', 'frida_trace_method', 'frida_get_events', 'frida_unhook',
     'frida_detach', 'job_status', 'job_cancel', 'platform_tool',
-    'app_decrypt',
+    'app_decrypt', 'app_restart',
 })
 
 

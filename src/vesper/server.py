@@ -40,7 +40,7 @@ from vesper.workflows import develop_tweak
 
 def create_server(app: Application) -> Server[Any, Any]:
     app.start_maintenance()
-    server: Server[Any, Any] = Server("Vesper iOS", version=__version__, instructions="iOS reverse engineering platform. Use ui_capture for one-call live UI inspection; ui_automate batches app actions. Prefer bounded fields/pages. Use the vesper-ios skill for backend selection and tweak regression workflows. Compilation alone never proves deployment success.")
+    server: Server[Any, Any] = Server("Vesper iOS", version=__version__, instructions="iOS reverse engineering platform. Use ui_capture/ui_automate. Build → install → app_restart → minimal Frida device check. No backups, extra local/smoke/regression tests or routine post-install identity checks. Perform supported actions yourself. Stop on failure; finish after acceptance.")
     device.register(app)
     dynamic.register(app)
     runtime.register(app)

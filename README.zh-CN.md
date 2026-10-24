@@ -28,12 +28,12 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 | Objective-C | 类、方法、属性、实例变量、IMP、对象元数据、头文件生成 | `objc_dump_class`、`objc_get_methods`、`objc_generate_header` |
 | 动态分析 | 持久 Frida 会话、观察型 Hook、有界事件与调用栈 | `frida_attach`、`frida_trace_method`、`frida_get_events` |
 | 静态分析 | 可选无界面 IDA、反汇编、Hex-Rays 伪代码、交叉引用、运行时地址关联 | `ida_open_binary`、`ida_decompile`、`ida_resolve_runtime_address` |
-| Tweak 开发 | 可编辑 Logos 项目、ABI 校验、Theos 构建、审批部署、验证与回滚 | `tweak_create_project`、`tweak_build`、`tweak_deploy` |
+| Tweak 开发 | 可编辑 Logos 项目、ABI 校验、Theos 构建、直接安装、SSH 重启及真机操作 | `tweak_create_project`、`tweak_build`、`tweak_deploy` |
 | 工作流 | 按钮标题修改、持久化报告、后台任务与取消 | `develop_tweak`、`job_status`、`job_cancel` |
 
 完整工具与必填字段见[工具参考](docs/TOOLS.md)。
 
-默认 `tool_profile="focused"` 只加载 19 个常用工具；完整 70 个底层能力可通过
+默认 `tool_profile="focused"` 只加载 20 个常用工具；完整 71 个底层能力可通过
 `platform_tool(name=..., action="schema")` 按需查询和调用，也可设为 `"full"`
 直接展示。将 `skills/vesper-ios` 复制到 Agent 的技能目录（Codex 为
 `~/.codex/skills/vesper-ios`），即可按需加载操作流程，减少常驻 schema 和上下文。
@@ -42,7 +42,7 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 实时实例参数，`app_logs` 和 `debug_inspect` 读取日志、栈与寄存器，`debug_setup`
 检查依赖并安装设备 debugserver。`app_decrypt` 复用会话砸壳，输出校验后的本地
 Mach-O，可继续传给 `objc_dump`（classdumpc 或 runtime）及 IDA/Hex-Rays。
-参见[分析组合流程](docs/DECRYPTION.md)和[真实性能报告](docs/CAPTURE_PERFORMANCE.md)。
+参见[分析组合流程](docs/DECRYPTION.md)。
 
 ## 环境要求
 
@@ -218,7 +218,7 @@ Foundation 值有深度、长度和数量上限，敏感字段脱敏。不调用
 
 图片保存在 `<state_dir>/screenshots/`。截图范围是所选应用可渲染的窗口；系统浮层、部分受保护内容或 GPU 渲染内容可能不会出现在图片中。
 
-### 构建并验证按钮标题 Tweak
+### 构建并安装按钮标题 Tweak
 
 [UIKit 示例应用](examples/UIKitFixture/README.md)包含标识为 `fixture.button` 的按钮及 Objective-C Action。按照该指南构建、安装并打开示例应用后，调用 `develop_tweak`：
 
@@ -239,13 +239,14 @@ Foundation 值有深度、长度和数量上限，敏感字段脱敏。不调用
 .venv/bin/vesper-approve --state-dir /absolute/path/to/vesper/.vesper approval_ID
 ```
 
-随后以 `workflow_id` 和已授权的 `approval_id` 再次调用 `develop_tweak` 继续执行。部署验证检查加载的构建标识、Hook 调用、实际按钮标题和可读取的崩溃证据。卸载或独立执行回滚需要单独审批。
+随后以 `workflow_id` 和已授权的 `approval_id` 再次调用 `develop_tweak` 继续执行。安装命令成功后即继续，通过 `app_restart` 用 SSH 重启 App 并重新附加 Frida；
+`restart=true` 已包含此步骤。随后用 `ui_automate` 操作 App，只验证当前修改。
+不要创建备份，不要追加本地测试、冒烟测试、长回归、加载模块/构建标记/UUID/安装文件哈希核对。
+只有安装异常或明确怀疑旧版本时才查身份；只有实际退出等症状时才查崩溃记录。
+首次关键失败就停止，修正后再测。
 
-完整的“检查 → 构建 → 审批安装 → 验证 → 审批卸载 → 恢复”交互演示：
-
-```sh
-PYTHONPATH=src .venv/bin/python examples/demo.py --config vesper.local.toml --device test
-```
+编译、安装、重启和支持的 App 操作都由 AI 完成，不转交用户手动操作，无需引入 VNC。
+用户验收后直接完成已授权的提交和推送，不追加检查，不持续追踪普通推送的 CI。
 
 ## 项目结构
 
@@ -261,7 +262,7 @@ vesper/
 │   └── assets/          # Frida Agent 产物及许可证声明
 ├── agents/frida/        # 设备端 TypeScript 源码
 ├── examples/            # 配置、UIKit 示例应用与 Demo
-├── scripts/             # 构建、文档和验证脚本
+├── scripts/             # 构建和文档脚本
 ├── tests/
 ├── docs/
 ├── pyproject.toml
@@ -270,34 +271,24 @@ vesper/
 
 ## 开发
 
-```sh
-uv sync --frozen --all-extras --no-editable
-npm ci --ignore-scripts
-npm run typecheck
-npm run build
-npm test
-.venv/bin/ruff check src tests scripts examples/demo.py
-.venv/bin/mypy
-.venv/bin/pytest -q
-uv build
-```
+App/Tweak 默认流程：
 
-Agent 使用 Frida Python 提供的官方编译器构建，并打包 `frida-objc-bridge`。修改 Python 源码或重新构建 Agent 后，在使用已安装的启动命令前更新非 editable 安装：
+**定点定位 → 最小修改 → 必要构建 → 安装 → 针对性真机验证 → 按授权提交、推送。**
+
+不要备份，不要增加或运行额外的本地测试、冒烟测试、长回归、批量采样和测试报告。
+复用已读信息，只读取相关差异和必要行；默认只查目标控件，截图限于复现、修复后和异常节点。
+没有新改动、新失败或用户明确要求，就不追加检查；用户验收后直接收尾。
+
+Vesper 自身代码只运行与修改直接相关的最小现有测试。轻量 CI 只构建包并执行一轮部署/重启测试。
+
+修改 Python 源码后直接更新本地 MCP：
 
 ```sh
 uv sync --frozen --all-extras --no-editable --reinstall-package vesper
-.venv/bin/python scripts/smoke_stdio.py
 ```
 
-直接从源码运行：
-
-`PYTHONPATH=src .venv/bin/python -m vesper.server --config /absolute/config.toml`
-
-重新生成工具文档：
-
-`PYTHONPATH=src .venv/bin/python scripts/document_tools.py`
-
-单元和集成测试按需替换设备、编译器及 IDA 等外部边界；SSH/SFTP 集成测试使用本地回环服务。真机 Demo 需要已配置的设备；可选工具链检查脚本为 `scripts/verify_theos.py` 和 `scripts/verify_ida.py`。
+只有修改 Frida TypeScript 时才用 `npm ci --ignore-scripts && npm run build` 重新构建 Agent。
+工具文档生成命令：`PYTHONPATH=src .venv/bin/python scripts/document_tools.py`。
 
 ## 安全与能力边界
 
@@ -307,8 +298,6 @@ uv sync --frozen --all-extras --no-editable --reinstall-package vesper
 - UIKit 访问、对象持有/释放和 PNG 编码均在主队列执行。对象租约会过期或被淘汰，仍保持 2048 个对象上限；共享引用及执行中的操作引用会受到保护。
 - 主要目标为 UIKit 和 Objective-C。Swift 可见性取决于 Objective-C 互操作性；完整 Swift 元数据与 SwiftUI 重建不在当前能力范围内。
 - 运行时与静态地址关联要求镜像身份、架构及段范围证据匹配。推断类型与伪代码会明确标记。
-
-性能实测与复现命令见[界面采集性能报告](docs/CAPTURE_PERFORMANCE.md)。
 
 请妥善保管本地配置、密钥、状态数据库、追踪记录和截图。审批与回滚行为见[安全与恢复](docs/SECURITY.md)。
 
@@ -326,7 +315,7 @@ uv sync --frozen --all-extras --no-editable --reinstall-package vesper
 
 ## 参与贡献
 
-欢迎提交 Issue 和 Pull Request。反馈问题时，请附上相关主机、iOS、越狱环境、Frida 和工具链版本，并移除敏感信息。保持修改聚焦，为行为变更补充有意义的测试，运行相关开发检查；用户可见行为变化时同步更新中英文 README，新增工具时更新生成的工具文档。
+欢迎提交 Issue 和 Pull Request。反馈问题时，请附上相关主机、iOS、越狱环境、Frida 和工具链版本，并移除敏感信息。保持修改聚焦，只做最小相关检查；用户可见行为变化时同步更新中英文 README，新增工具时更新生成的工具文档。
 
 ## 许可证
 

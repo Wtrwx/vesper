@@ -9,9 +9,10 @@ import pytest
 from tests.fakes import FakeFrida, FakeSSH
 from tests.test_theos import make_deb
 from vesper.app import Application
+from vesper.core.errors import Code, MCPError
 from vesper.core.permissions import sha256
 from vesper.core.registry import new_id
-from vesper.tools.tweak import DeploymentRequest
+from vesper.tools.tweak import Verify
 from vesper.workflows.deployment import DeploymentService
 from vesper.workflows.develop_tweak import DevelopRequest, DevelopWorkflow
 
@@ -46,58 +47,48 @@ async def prepare(app):
     return await DevelopWorkflow(app).run(DevelopRequest(device_id="test", bundle_id="dev.iosdecompiler.fixture", accessibility_identifier="fixture.button", replacement_title="Tweaked", background=False))
 
 
-@pytest.mark.asyncio
-async def test_end_to_end_mocked_device_requires_observed_behavior_and_restores(app: Application, infrastructure):
+async def resume(app, report):
+    approval = report["approval"]["approval_id"]
+    grant(app, approval)
+    return await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
+
+
+async def test_build_installs_directly_then_leaves_device_testing_to_caller(app: Application, infrastructure, monkeypatch):
     ssh, frida = infrastructure
     report = await prepare(app)
-    assert report["phase"] == "awaiting_approval" and not report["success"]
-    assert report["build_results"][-1]["success"] and not ssh.mutations
-    assert report["inspected_classes_and_methods"][0]["button_actions"][0]["selector"] == "buttonTapped:"
-    approval = report["approval"]["approval_id"]
-    grant(app, approval)
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
-    assert report["success"] and report["verification"]["verified"]
-    assert report["verification"]["hook_invoked"] and frida.title == "Tweaked"
-    deployment_id = report["deployment_results"]["deployment_id"]
-    result = await app.tools.invoke("tweak_uninstall", {"deployment_id": deployment_id, "restart": True})
-    assert not result.ok and result.error.code == "APPROVAL_REQUIRED"
-    grant(app, result.error.details["approval_id"])
-    restored = await DeploymentService(app).uninstall(DeploymentRequest(deployment_id=deployment_id, restart=True, approval_id=result.error.details["approval_id"]))
-    assert restored["removed"] and frida.title == "Original" and ssh.installed is None
-
-
-@pytest.mark.asyncio
-async def test_failed_install_is_rolled_back(app: Application, infrastructure):
-    ssh, _ = infrastructure
-    report = await prepare(app)
-    approval = report["approval"]["approval_id"]
-    grant(app, approval)
-    ssh.fail_install = True
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
-    assert not report["success"] and report["phase"] == "deployment_failed"
-    assert report["rollback"]["restored"] and "uninstall" in ssh.mutations
-
-
-@pytest.mark.asyncio
-async def test_successful_install_without_behavior_is_not_success(app: Application, infrastructure, monkeypatch):
-    ssh, frida = infrastructure
-    report = await prepare(app)
-    approval = report["approval"]["approval_id"]
-    grant(app, approval)
+    assert report["phase"] == "awaiting_approval" and not ssh.mutations
+    # An existing package no longer requires a managed backup or version/hash checks.
+    ssh.installed = {"metadata": {"version": "unmanaged-old-package"}}
+    monkeypatch.setattr(ssh, "package_status", AsyncMock(side_effect=AssertionError("No post-install package checks")))
+    monkeypatch.setattr(ssh, "list_crashes", AsyncMock(side_effect=AssertionError("No automatic crash sweep")))
+    monkeypatch.setattr(frida, "rpc", AsyncMock(wraps=frida.rpc))
     frida.wrong_title = True
-    monkeypatch.setattr("vesper.workflows.develop_tweak.asyncio.sleep", AsyncMock())
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
-    assert report["phase"] == "verification_failed" and not report["success"]
-    assert report["verification"]["loaded"] and not report["verification"]["behavior_observed"]
-    assert report["rollback"]["restored"] and ssh.installed is None
+    report = await resume(app, report)
+    assert report["phase"] == "installed" and report["success"]
+    assert ssh.mutations == ["upload", "install", "ssh_restart"]
+    assert report["deployment_results"]["previous"] is None
+    assert report["verification"] is None and report["rollback"] is None
+    assert not any(call.args[2] == "tweak_state" for call in frida.rpc.call_args_list)
+    # An explicit device check reads just the requested UI once, without undoing installation.
+    evidence = await DeploymentService(app).verify(Verify(
+        deployment_id=report["deployment_results"]["deployment_id"], session_id=report["session_id"],
+        accessibility_identifier="fixture.button", expected_title="Tweaked"))
+    assert not evidence["verified"] and ssh.installed is not None
+    assert ssh.mutations == ["upload", "install", "ssh_restart"]
 
 
-@pytest.mark.asyncio
-async def test_cancelled_install_settles_then_rolls_back(app: Application, infrastructure, monkeypatch):
+async def test_failed_install_does_not_roll_back_or_uninstall(app: Application, infrastructure):
     ssh, _ = infrastructure
     report = await prepare(app)
-    approval = report["approval"]["approval_id"]
-    grant(app, approval)
+    ssh.fail_install = True
+    report = await resume(app, report)
+    assert not report["success"] and report["phase"] == "deployment_failed"
+    assert ssh.mutations == ["upload", "install"] and report["rollback"] is None
+
+
+async def test_cancelled_install_finishes_without_uninstalling(app: Application, infrastructure, monkeypatch):
+    ssh, _ = infrastructure
+    report = await prepare(app)
     started, release = asyncio.Event(), asyncio.Event()
     actual_install = ssh.install
     async def blocked_install(*args):
@@ -105,51 +96,29 @@ async def test_cancelled_install_settles_then_rolls_back(app: Application, infra
         await release.wait()
         return await actual_install(*args)
     monkeypatch.setattr(ssh, "install", blocked_install)
-    task = asyncio.create_task(DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False)))
+    task = asyncio.create_task(resume(app, report))
     await asyncio.wait_for(started.wait(), 2)
     task.cancel()
     release.set()
     with pytest.raises(asyncio.CancelledError):
         await task
-    assert ssh.installed is None and "uninstall" in ssh.mutations
+    assert ssh.installed is not None and "uninstall" not in ssh.mutations
 
 
-async def test_expired_workflow_approval_is_refreshed_without_mutations(app: Application, infrastructure):
-    ssh, _ = infrastructure
-    report = await prepare(app)
-    old = report["approval"]["approval_id"]
-    app.registry.db.execute("UPDATE approvals SET expires=0 WHERE id=?", (old,))
-    app.registry.db.commit()
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=old, background=False))
-    assert report["phase"] == "awaiting_approval" and report["approval"]["approval_id"] != old
-    assert not ssh.mutations
-
-
-async def test_stale_package_record_cannot_uninstall_changed_artifact(app: Application, infrastructure, monkeypatch):
-    ssh, _ = infrastructure
-    report = await prepare(app)
-    approval = report["approval"]["approval_id"]
+@pytest.mark.parametrize("ssh_available", [True, False])
+async def test_app_restart_reattaches_for_automation(app: Application, infrastructure, monkeypatch, ssh_available):
+    ssh, frida = infrastructure
+    old = await frida.attach("test", "dev.iosdecompiler.fixture")
+    if not ssh_available:
+        monkeypatch.setattr(ssh, "restart_app", AsyncMock(side_effect=MCPError(Code.UNAVAILABLE, "uiopen missing")))
+    arguments = {"device_id": "test", "bundle_id": "dev.iosdecompiler.fixture"}
+    pending = await app.tools.invoke("app_restart", arguments)
+    assert pending.error.code == "APPROVAL_REQUIRED" and not ssh.mutations
+    approval = pending.error.details["approval_id"]
     grant(app, approval)
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
-    deployment_id = report["deployment_results"]["deployment_id"]
-    monkeypatch.setattr(ssh, "file_sha256", AsyncMock(return_value="a different installed artifact"))
-    before = list(ssh.mutations)
-    rejected = await app.tools.invoke("tweak_uninstall", {"deployment_id": deployment_id})
-    assert not rejected.ok and rejected.error.code == "IDENTITY_MISMATCH"
-    assert ssh.mutations == before
-
-
-async def test_late_automatic_recovery_cannot_remove_a_superseding_deployment(app: Application, infrastructure):
-    ssh, _ = infrastructure
-    report = await prepare(app)
-    approval = report["approval"]["approval_id"]
-    grant(app, approval)
-    report = await DevelopWorkflow(app).run(DevelopRequest(workflow_id=report["workflow_id"], approval_id=approval, background=False))
-    service = DeploymentService(app)
-    stale = report["deployment_results"]
-    current = service.record(stale["deployment_id"])
-    service.save(current, "superseded")
-    before = list(ssh.mutations)
-    result = await service.rollback_after_verification(stale)
-    assert not result["restored"] and result["operator_action_required"]
-    assert ssh.mutations == before
+    result = await app.tools.invoke("app_restart", {**arguments, "approval_id": approval})
+    assert result.ok and result.data["pid"] != old["pid"]
+    assert result.data["backend"] == ("ssh" if ssh_available else "frida")
+    assert not frida.sessions[old["session_id"]].active
+    assert frida.sessions[result.data["session_id"]].active
+    assert ssh.mutations == (["ssh_restart"] if ssh_available else ["terminate", "launch"])

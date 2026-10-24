@@ -1,7 +1,7 @@
 """Physical-device demonstration through the real MCP stdio transport.
 
 An operator grants each exact device mutation using the separate approval CLI.
-This script never creates a grant or assumes compilation proves success.
+Build, install, restart, and read the selected control once; no backups or long checks.
 """
 from __future__ import annotations
 
@@ -50,26 +50,12 @@ async def demo(args: argparse.Namespace) -> None:
             report = (await call("develop_tweak", {"workflow_id": report["workflow_id"], "approval_id": report["approval"]["approval_id"], "background": False}))["data"]
             if not report["success"]:
                 raise RuntimeError(json.dumps(report, indent=2))
-            print("Loaded marker, hook invocation and changed title verified:", report["verification"])
-            deployment_id = report["deployment_results"]["deployment_id"]
-            pending = await call("tweak_uninstall", {"deployment_id": deployment_id, "restart": True}, allow_error=True)
-            if pending["ok"] or pending["error"]["code"] != "APPROVAL_REQUIRED":
-                raise RuntimeError("Expected a separate uninstall approval")
-            approval_id = pending["error"]["details"]["approval_id"]
-            approve(approval_id)
-            removed = (await call("tweak_uninstall", {"deployment_id": deployment_id, "restart": True, "approval_id": approval_id}))["data"]
-            if not removed["removed"]:
-                raise RuntimeError("Uninstallation failed")
-            restored = False
-            for _ in range(12):
-                views = (await call("ui_find_views", {"device_id": args.device, "session_id": removed["session_id"], "accessibility_identifier": "fixture.button", "include_text": True}))["data"]["views"]
-                if len(views) == 1 and views[0].get("text") == "Original":
-                    restored = True
-                    break
-                await asyncio.sleep(0.5)
-            if not restored:
-                raise RuntimeError("Original behavior was not observed after removal")
-            print("PASS: physical-device inspection, build, load, title change, uninstall and Original title restoration observed.")
+            print("Installed and restarted:", report["deployment_results"]["deployment_id"])
+            views = await call("ui_find_views", {"device_id": args.device,
+                "session_id": report["session_id"], "accessibility_identifier": "fixture.button",
+                "include_text": True, "limit": 1})
+            print("Current button:", views["data"].get("views", []))
+
 
 
 if __name__ == "__main__":

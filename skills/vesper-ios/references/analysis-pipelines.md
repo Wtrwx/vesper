@@ -9,7 +9,7 @@ entire app and loading everything for every question.
 | Function logic, branches, callers or data references | `app_decrypt` → `ida_open_binary` → bounded symbols/xrefs/disassembly → selected Hex-Rays pseudocode |
 | Which live method implements a selector? | Runtime method IMP → `ida_resolve_runtime_address` against the matching decrypted image |
 | Current ivar values or view ownership | `objc_query_instances` with known handles/fields; UI detail only for the selected control |
-| Behavior while a button is pressed | Cursor-filtered logs or one bounded trace → `ui_automate` → assertion → stop instrumentation |
+| Behavior while a button is pressed | Cursor-filtered logs or one bounded trace → `ui_automate` → read the result → stop instrumentation |
 
 ## Decrypt exactly the required image
 

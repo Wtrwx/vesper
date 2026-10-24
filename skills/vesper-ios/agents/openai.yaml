@@ -1,4 +1,4 @@
 interface:
   display_name: "Vesper iOS"
-  short_description: "Inspect iOS apps, debug tweaks, and run UIKit tests"
-  default_prompt: "Use $vesper-ios to inspect the current app and verify my tweak with a focused regression test."
+  short_description: "Inspect iOS apps, install tweaks, and automate actions"
+  default_prompt: "Use $vesper-ios to build and install my tweak, restart the app over SSH, and check the requested change through Frida without backups or extra tests."

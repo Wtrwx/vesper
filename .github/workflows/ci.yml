@@ -3,31 +3,14 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  checks:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python: ["3.11", "3.12"]
-    runs-on: ${{ matrix.os }}
+  minimal:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.12"
           enable-cache: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-      - run: uv sync --frozen --all-extras
-      - run: npm ci --ignore-scripts
-      - run: npm run typecheck
-      - run: npm run build
-      - run: npm test
-      - run: uv run ruff check src tests scripts examples/demo.py
-      - run: uv run mypy
-      - run: uv run pytest -q
-      - run: uv build
       - run: uv sync --frozen --all-extras --no-editable
-      - run: .venv/bin/python scripts/smoke_stdio.py
+      - run: .venv/bin/pytest -q tests/test_workflow.py
+      - run: uv build

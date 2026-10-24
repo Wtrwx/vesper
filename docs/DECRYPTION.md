@@ -73,4 +73,4 @@ pipeline, not a full dump of the much larger app framework or extensions.
 Local tests cover encrypted/malformed/UUID-mismatched results, session pinning,
 background cancellation, partial transfer removal, source cache invalidation,
 and remote temporary cleanup. Private binaries and generated headers remain
-outside Git. See [VALIDATION.md](VALIDATION.md) for device/debugger limitations.
+outside Git. Use Frida/logs when the selected LLDB backend cannot attach.

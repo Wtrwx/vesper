@@ -52,10 +52,10 @@ mode="summary")` or explicit `"screenshot"`/`"both"`. It attaches only when need
 Read the returned immutable cursor with `ui_snapshot`; new live observations omit
 `snapshot_id`. No preliminary app/window enumeration is necessary.
 
-The focused catalog loads 19 common tools. For an advanced primitive, call
+The focused catalog loads 20 common tools. For an advanced primitive, call
 `platform_tool(name="objc_get_ivars", action="schema")`, then execute through
 `platform_tool(name="objc_get_ivars", arguments={...})`. Set top-level
-`tool_profile="full"` to advertise all 70 tools directly.
+`tool_profile="full"` to advertise all 71 tools directly.
 
 Copy `skills/vesper-ios` into your agent's skill directory (for Codex,
 `~/.codex/skills/vesper-ios`). Its conditional references cover decryption +

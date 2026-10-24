@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
 from pydantic import Field
 
 from vesper.app import Application
+from vesper.core.errors import Code, MCPError
 from vesper.core.permissions import sha256
 from vesper.core.registry import new_id
 from vesper.tools.models import AppRequest, DeviceRequest, Empty
@@ -28,6 +30,34 @@ class MutateApp(AppRequest):
 
 class DeviceInfo(DeviceRequest):
     force_refresh: bool = False
+
+
+async def restart_application(app: Application, device_id: str, bundle_id: str) -> dict[str, Any]:
+    app.permissions.device(device_id, bundle_id)
+    applications = await app.frida.applications(device_id)
+    target = next((item for item in applications if item["bundle_id"] == bundle_id), None)
+    if target is None:
+        raise MCPError(Code.NOT_FOUND, "Selected app is not installed")
+    for session in list(app.frida.sessions.values()):
+        if session.active and session.device_id == device_id and session.bundle_id == bundle_id:
+            await app.frida.detach(device_id, session.id)
+    try:
+        restarted = await app.ssh.restart_app(device_id, bundle_id, target.get("pid") or None)
+    except MCPError as exc:
+        if exc.code != Code.UNAVAILABLE:
+            raise
+        await app.frida.terminate(device_id, bundle_id)
+        await app.frida.spawn(device_id, bundle_id)
+        restarted = {"bundle_id": bundle_id, "restarted": True, "backend": "frida"}
+    for attempt in range(10):
+        try:
+            attached = await app.frida.attach(device_id, bundle_id)
+            return {**restarted, "session_id": attached["session_id"], "pid": attached["pid"]}
+        except MCPError as exc:
+            if exc.code != Code.NOT_FOUND or attempt == 9:
+                raise
+            await asyncio.sleep(0.2)
+    raise AssertionError("Unreachable restart state")
 
 
 def register(app: Application) -> None:
@@ -78,6 +108,12 @@ def register(app: Application) -> None:
         app.permissions.require("device_terminate", {"device_id": request.device_id, "bundle_id": request.bundle_id}, request.approval_id)
         return await app.frida.terminate(request.device_id, request.bundle_id)
 
+    async def restart(request: MutateApp) -> dict[str, Any]:
+        app.permissions.device(request.device_id, request.bundle_id)
+        app.permissions.require("app_restart", {"device_id": request.device_id, "bundle_id": request.bundle_id}, request.approval_id)
+        async with app.deployment_locks.setdefault(request.device_id, asyncio.Lock()):
+            return await restart_application(app, request.device_id, request.bundle_id)
+
     app.tools.add("device_list", Empty, configured, "List configured allowlisted device IDs and applications.")
     app.tools.add("device_connect", DeviceRequest, connect, "Connect using pinned SSH host keys and public-key authentication; discover iOS and jailbreak environment.")
     app.tools.add("device_info", DeviceInfo, info, "Get TTL-cached SSH discovery for this connection; force_refresh=true requests fresh architecture, iOS and jailbreak evidence.")
@@ -87,3 +123,4 @@ def register(app: Application) -> None:
     app.tools.add("device_download", Download, download, "Download a bounded file from configured device read roots into the workspace.")
     app.tools.add("device_launch", MutateApp, launch, "Launch an explicitly selected app using Frida spawn/resume. Requires operator approval.", read_only=False)
     app.tools.add("device_terminate", MutateApp, terminate, "Terminate the selected app after explicit operator approval.", read_only=False)
+    app.tools.add("app_restart", MutateApp, restart, "Restart the selected app over SSH and return a fresh Frida session for UI automation. Uses existing Frida launch if uiopen is missing; no VNC required.", read_only=False)

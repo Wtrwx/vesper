@@ -1,12 +1,42 @@
-# vesper
+<h1 align="center">
+  <a href="docs/assets/vesper-logo.png">
+    <img src="docs/assets/vesper-banner.png" alt="Vesper — iOS 逆向工程平台 · MCP 工具 + Agent Skill" width="960">
+  </a>
+</h1>
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<p align="center">
+  <strong>在 Agent 中完成界面检查、自动化、分析与 Tweak 开发。</strong>
+</p>
 
-iOS 逆向平台：通过 MCP 工具与 Agent Skill 串联运行时检查、App 自动化、砸壳、静态分析、调试和 Tweak 开发。
+<p align="center">
+  <a href="https://github.com/Wtrwx/vesper/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Wtrwx/vesper/ci.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="CI 工作流状态"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.11 及以上"></a>
+  <a href="#环境要求"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-8B86F7?style=flat-square" alt="主机平台：macOS 与 Linux"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-56BFCF?style=flat-square" alt="MIT 许可证"></a>
+</p>
 
-vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，通过结构化工具完成 UIKit 界面检查、Objective-C 元数据查询、方法调用追踪和应用级 Tweak 构建。[vesper-ios Agent Skill](skills/vesper-ios/SKILL.md) 负责编排砸壳 + classdumpc/IDA、SSH 构建安装和调试回退等组合流程。
+<p align="center">
+  <a href="README.md">English</a> · <strong>简体中文</strong>
+</p>
 
-## 目录
+<p align="center">
+  <a href="#快速开始">快速开始</a> ·
+  <a href="docs/CLIENTS.md">客户端配置</a> ·
+  <a href="docs/TOOLS.md">工具参考</a> ·
+  <a href="#demo">Demo</a> ·
+  <a href="https://github.com/Wtrwx/vesper/issues">问题反馈</a>
+</p>
+
+Vesper 是一个 iOS 逆向平台，通过结构化 MCP 工具与 Agent Skill 串联运行时检查、App 自动化、砸壳、静态分析、调试和 Tweak 开发。将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接后，即可通过 Agent 操作目标应用。
+
+[vesper-ios Agent Skill](skills/vesper-ios/SKILL.md) 将底层工具编排为界面检查、砸壳 + classdumpc/IDA、SSH Tweak 开发和调试等组合流程。仓库提供 [Codex、Claude Code 和 Cursor 的配置示例](docs/CLIENTS.md)。
+
+| 界面检查与自动化 | 运行时分析与调试 | Tweak 构建与部署 |
+| --- | --- | --- |
+| 采集 UIKit 与 SwiftUI 暴露的无障碍语义，查询实时对象并批量操作界面。 | 追踪 Objective-C、读取 Swift/原生值、砸壳导出 Mach-O，按需接入 IDA 或 LLDB。 | 生成可编辑 Logos 项目，通过 Theos 构建，经 SSH 安装并重启应用。 |
+
+<details>
+<summary><strong>目录</strong></summary>
 
 - [功能](#功能)
 - [能力架构](#能力架构)
@@ -20,6 +50,8 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 - [参与贡献](#参与贡献)
 - [友情链接](#友情链接)
 - [许可证](#许可证)
+
+</details>
 
 ## 功能
 
@@ -356,6 +388,9 @@ uv sync --frozen --all-extras --no-editable --reinstall-package vesper
 | --- | --- |
 | [客户端配置](docs/CLIENTS.md) | 通过 stdio 连接 MCP 客户端 |
 | [工具参考](docs/TOOLS.md) | 工具分类、必填参数与行为 |
+| [自动化与实例参数](docs/AUTOMATION.md) | UIKit/SwiftUI 操作、实例值与输入后端 |
+| [砸壳与分析流程](docs/DECRYPTION.md) | Mach-O 导出、头文件与可选静态分析 |
+| [Agent Skill](skills/vesper-ios/SKILL.md) | 按需加载检查、分析、调试和 Tweak 工作流 |
 | [UIKit 示例应用](examples/UIKitFixture/README.md) | 构建示例应用并运行完整 Demo |
 | [安全与恢复](docs/SECURITY.md) | 权限、审批范围和故障恢复 |
 | [故障排查](docs/TROUBLESHOOTING.md) | 设备、Frida、IDA 与构建诊断 |

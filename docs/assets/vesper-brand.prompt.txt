@@ -1,0 +1,22 @@
+Vesper README brand assets
+Generated with the built-in imagegen tool. The banner uses the logo as its identity reference.
+
+LOGO — vesper-logo.png
+Use case: logo-brand
+Asset type: standalone transparent logo mark for the open-source Vesper iOS reverse engineering platform, used in a GitHub README.
+Primary request: Create one polished, distinctive geometric V monogram. Two confident, balanced strokes form a clear V; a small, restrained evening-star cut in the upper-right stroke evokes the name Vesper and precise runtime inspection. The silhouette must stay legible at 32px.
+Style/medium: minimal vector-like brand design, crisp smooth edges, clean geometry, no texture.
+Color palette: cool periwinkle #9B8AFF transitioning subtly into cyan #56D9EE, compatible with the repository's dark navy capability architecture illustration.
+Composition/framing: one centered standalone mark on a square canvas, mark fills about 70% of the width, comfortable equal padding.
+Scene/backdrop: genuinely transparent alpha background.
+Constraints: only the mark, no wordmark, no text, no mockup, no background plate, no outer frame, no drop shadow, no 3D, no Apple logo, no lock, no hacker imagery, no extra decorations. Refined developer-tool identity.
+
+BANNER — vesper-banner.png
+Use case: logo-brand
+Asset type: wide GitHub README masthead for Vesper, an open-source iOS reverse engineering platform using MCP tools and agent skills.
+Input images: Image 1 is the approved standalone Vesper logo mark; use it as the identity reference and preserve its geometric V silhouette, evening-star negative space, and violet-to-cyan colors.
+Primary request: Produce a refined wide banner with a 3:1 aspect ratio (approximately 1800 by 600). On a deep navy #080F20 background, lay out the supplied V mark and a large, beautifully kerned lowercase wordmark "vesper" as a centered horizontal lockup. The logo is slightly smaller than the wordmark height and clearly separate from the lettering. Under the wordmark place the exact subtitle "iOS Reverse Engineering" and then the small restrained text "MCP tools + Agent skills".
+Style/medium: premium developer tooling identity, minimalist flat graphic design with precise typography, generous negative space, crisp smooth outlines and restrained lighting.
+Composition/framing: a single strong brand lockup with wide safe margins for display in GitHub at 840px wide. Background may have a barely visible periwinkle radial light and sparse, delicate straight connector paths confined to the edges, referencing the repository's runtime-analysis architecture illustration. Keep the central logo and text clear.
+Text (verbatim): "vesper", "iOS Reverse Engineering", "MCP tools + Agent skills".
+Constraints: preserve the reference logo identity; exactly these three text lines; no additional labels, no fake terminal, no product screenshots, no device mockup, no badges, no Apple or third-party logos, no photographic texture, no watermark, no busy grid, no large neon glow. Professional and readable.

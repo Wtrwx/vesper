@@ -1,17 +1,48 @@
-# vesper
+<h1 align="center">
+  <a href="docs/assets/vesper-logo.png">
+    <img src="docs/assets/vesper-banner.png" alt="Vesper — iOS Reverse Engineering · MCP tools + Agent skills" width="960">
+  </a>
+</h1>
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+<p align="center">
+  <strong>Inspect, automate, analyze and build — from your agent.</strong>
+</p>
 
-An iOS reverse engineering platform combining MCP primitives and agent skills
-for runtime inspection, app automation, decryption, debugging and tweak development.
+<p align="center">
+  <a href="https://github.com/Wtrwx/vesper/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Wtrwx/vesper/ci.yml?branch=main&amp;style=flat-square&amp;label=CI" alt="CI workflow status"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.11 or newer"></a>
+  <a href="#requirements"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-8B86F7?style=flat-square" alt="Host platforms: macOS and Linux"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-56BFCF?style=flat-square" alt="MIT License"></a>
+</p>
 
-vesper connects an MCP client to SSH, Frida, and an optional licensed IDA
-installation. Inspect UIKit views, explore Objective-C metadata, trace method
-calls, and build app-scoped tweaks through structured tools.
-The [vesper-ios Agent Skill](skills/vesper-ios/SKILL.md) composes inspection,
-decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-## Contents
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="docs/CLIENTS.md">Client setup</a> ·
+  <a href="docs/TOOLS.md">Tool reference</a> ·
+  <a href="#demos">Demos</a> ·
+  <a href="https://github.com/Wtrwx/vesper/issues">Issues</a>
+</p>
+
+Vesper is an iOS reverse engineering platform combining structured MCP tools and
+agent skills for runtime inspection, app automation, decryption, debugging and
+tweak development. Connect your MCP client to SSH, Frida and an optional licensed
+IDA installation, then work with the target app through your agent.
+
+The [vesper-ios Agent Skill](skills/vesper-ios/SKILL.md) composes these primitives
+into inspection, decryption + classdumpc/IDA, SSH tweak development and debugging
+workflows. [Codex, Claude Code and Cursor setup examples](docs/CLIENTS.md) are
+included.
+
+| Inspect & automate | Analyze & debug | Build & deploy |
+| --- | --- | --- |
+| Capture UIKit and exposed SwiftUI accessibility, query live objects and batch UI actions. | Trace Objective-C, inspect Swift/native values, decrypt Mach-O and use optional IDA or LLDB. | Generate editable Logos projects, build with Theos, install and restart over SSH. |
+
+<details>
+<summary><strong>Contents</strong></summary>
 
 - [Features](#features)
 - [Capability architecture](#capability-architecture)
@@ -25,6 +56,8 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 - [Contributing](#contributing)
 - [Friends](#friends)
 - [License](#license)
+
+</details>
 
 ## Features
 
@@ -432,6 +465,9 @@ Keep local configs, keys, state databases, traces and screenshots private. See
 | --- | --- |
 | [Client setup](docs/CLIENTS.md) | Connect MCP clients over stdio |
 | [Tool reference](docs/TOOLS.md) | Tool groups, required inputs and behavior |
+| [Automation and value queries](docs/AUTOMATION.md) | UIKit/SwiftUI actions, instance values and input backends |
+| [Decryption and analysis](docs/DECRYPTION.md) | Mach-O extraction, headers and optional static analysis |
+| [Agent skill](skills/vesper-ios/SKILL.md) | On-demand workflows for inspection, analysis, debugging and tweaks |
 | [UIKit fixture](examples/UIKitFixture/README.md) | Build the example app and run the complete demo |
 | [Security and recovery](docs/SECURITY.md) | Permissions, approval scopes and failure recovery |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Device, Frida, IDA and build diagnostics |

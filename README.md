@@ -14,6 +14,7 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 ## Contents
 
 - [Features](#features)
+- [Capability architecture](#capability-architecture)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [Demos](#demos)
@@ -22,6 +23,7 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 - [Security and scope](#security-and-scope)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+- [Friends](#friends)
 - [License](#license)
 
 ## Features
@@ -41,6 +43,16 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 | Workflows | Button-title tweak workflow, persistent reports, background jobs and cancellation | `develop_tweak`, `job_status`, `job_cancel` |
 
 See the [tool reference](docs/TOOLS.md) for the complete catalog and required fields.
+
+## Capability architecture
+
+![Vesper capability architecture: agent clients and skills, MCP tools, inspection and automation, runtime analysis, debugging, decryption, static analysis, tweak development, and device execution](docs/assets/vesper-capability-architecture.png)
+
+Agent skills compose workflows over MCP primitives. SSH and Frida connect those
+tools to the target app; classdumpc, IDA/Hex-Rays, LLDB/debugserver, Theos and
+ZXTouch provide optional analysis, development and physical-input integrations.
+Swift support is experimental. See [automation](docs/AUTOMATION.md) and
+[analysis pipelines](docs/DECRYPTION.md) for backend requirements and limits.
 
 ## Requirements
 
@@ -432,6 +444,10 @@ Issues and pull requests are welcome. Include the relevant host, iOS, jailbreak,
 Frida and toolchain versions when reporting a problem, with sensitive data
 removed. Keep changes focused, use minimal relevant checks, and update both READMEs
 when changing user-facing behavior. Add new tools to the generated reference.
+
+## Friends
+
+- [LINUX DO](https://linux.do/)
 
 ## License
 

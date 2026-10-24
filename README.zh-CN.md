@@ -9,6 +9,7 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 ## 目录
 
 - [功能](#功能)
+- [能力架构](#能力架构)
 - [环境要求](#环境要求)
 - [快速开始](#快速开始)
 - [Demo](#demo)
@@ -17,6 +18,7 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 - [安全与能力边界](#安全与能力边界)
 - [文档](#文档)
 - [参与贡献](#参与贡献)
+- [友情链接](#友情链接)
 - [许可证](#许可证)
 
 ## 功能
@@ -44,6 +46,15 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 检查依赖并安装设备 debugserver。`app_decrypt` 复用会话砸壳，输出校验后的本地
 Mach-O，可继续传给 `objc_dump`（classdumpc 或 runtime）及 IDA/Hex-Rays。
 参见[分析组合流程](docs/DECRYPTION.md)。
+
+## 能力架构
+
+![Vesper 能力架构：Agent 客户端与 Skill、MCP 工具、界面自动化、运行时分析、日志调试、砸壳、静态分析、Tweak 开发与设备执行层](docs/assets/vesper-capability-architecture.png)
+
+Agent Skill 基于 MCP 工具编排组合流程，通过 SSH 与 Frida 连接目标应用；
+classdumpc、IDA/Hex-Rays、LLDB/debugserver、Theos 和 ZXTouch 按需提供分析、
+开发和物理触摸能力。Swift 支持仍属实验阶段。后端要求与限制见
+[自动化与实例参数](docs/AUTOMATION.md)和[分析组合流程](docs/DECRYPTION.md)。
 
 ## 环境要求
 
@@ -354,6 +365,10 @@ uv sync --frozen --all-extras --no-editable --reinstall-package vesper
 ## 参与贡献
 
 欢迎提交 Issue 和 Pull Request。反馈问题时，请附上相关主机、iOS、越狱环境、Frida 和工具链版本，并移除敏感信息。保持修改聚焦，只做最小相关检查；用户可见行为变化时同步更新中英文 README，新增工具时更新生成的工具文档。
+
+## 友情链接
+
+- [LINUX DO](https://linux.do/)
 
 ## 许可证
 

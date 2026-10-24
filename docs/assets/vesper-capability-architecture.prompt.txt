@@ -1,0 +1,22 @@
+Use case: infographic-diagram
+Asset type: a finished capability architecture illustration for the bilingual GitHub README of Vesper, an iOS reverse engineering platform.
+Primary request: Create one beautiful, technically accurate, highly readable architecture diagram. Use a wide landscape canvas around 2560 x 1600. Clean engineering editorial style, subtle midnight navy background, bright off-white lettering, restrained violet and cyan accents, thin connectors, gently rounded cards, generous spacing. Flat orthographic layout with crisp typography; no perspective or ornamental 3D elements. Chinese section titles with short English technical labels, exactly as specified below. Keep every label legible when displayed at GitHub README width.
+
+Composition, from top to bottom:
+1. Title: "Vesper 能力架构". Subtitle: "iOS Reverse Engineering Platform".
+2. Client and orchestration layer: two adjacent cards. Left: "Agent Clients", "Codex · Claude Code · Cursor". Right: "vesper-ios Skill", "按需编排组合工作流", "Decrypt → classdumpc / IDA", "Build → Install → Restart → Frida". A fine dotted connector shows that clients use the skill; both feed down into the MCP platform. The skill is a client-side workflow layer, not a device service.
+3. One central full-width platform bar: "Vesper MCP", "ui_capture · ui_automate · platform_tool", "20 focused tools · Advanced tools on demand". Within the same platform bar, a distinct compact efficiency strip: "会话复用 · 快照分页 · 按字段返回 · 原生图片". Do not invent performance percentages.
+4. Six equally weighted capability cards in a clear three-column, two-row grid. Use small original line icons. Route the central platform to all six with shared connectors that do not cross text. Exact card text:
+   A. "界面与自动化" / "UIKit / SwiftUI AX" / "Capture · Tap · Back · Text · Gestures*"
+   B. "运行时与实例" / "Objective-C · Swift · C/C++" / "Fields · Values · Calls · Hooks"
+   C. "日志与调试" / "Frida · LLDB* · debugserver*" / "Logs · Threads · Registers · Stacks"
+   D. "砸壳与头文件" / "Decrypted Mach-O" / "Runtime headers / classdumpc*"
+   E. "静态分析" / "IDA Pro* / Hex-Rays*" / "Disassembly · Xrefs · Runtime mapping"
+   F. "Tweak 开发" / "Logos / Theos*" / "SSH build → Install → Restart"
+5. Converge into an execution strip: "连接与执行", "SSH / SFTP", "Frida agent", "ZXTouch*". Connect down to one understated phone outline and a broad device label: "Jailbroken iOS device", "Target app · UIKit · SwiftUI · Objective-C · Swift · Native". SSH and Frida bridge to the device; classdumpc, IDA and Theos belong to the capability layer on the host, not inside the phone.
+6. Discreet but readable footnote: "* Optional components · Swift support is experimental".
+
+Constraints: Render the exact labels without adding prose. Maintain an obvious hierarchy and coherent connector directions. No fake tools, no universal SwiftUI state reconstruction claims, no VNC, no screenshots, no logos copied from third parties, no watermark. Do not turn the diagram into a marketing poster. It must communicate the real platform architecture at a glance.
+
+Final edit prompt:
+Correct only the connector semantics in the generated diagram. Preserve the exact canvas, all text, typography, icons, colors and card positions. The six capability cards are independent siblings, not a sequence: remove every connector between the first and second row, and remove the lines/arrows entering the bottom of individual capability cards. Place one subtle rounded outline around the entire six-card grid, with generous small padding and no new label. Replace the three-way fan-out above the grid with one simple downward arrow from Vesper MCP to the top edge of this enclosing group. Add one simple downward arrow from the enclosing group's bottom edge to the top edge of the connection/execution strip. No arrow may point up from the execution strip into the capabilities. The execution strip connects to the device with a single downward arrowhead at the device end only. Keep the client/skill/MCP connectors unchanged. No changes to text, no additional copy. Produce the corrected final README illustration.

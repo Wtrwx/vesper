@@ -24,8 +24,9 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 | 模块 | 能力 | 工具示例 |
 | --- | --- | --- |
 | 设备管理 | SSH/SFTP、设备信息、应用与进程枚举 | `device_connect`、`device_info`、`device_list_apps` |
-| UIKit 检查 | 窗口与场景、视图树、坐标命中、约束、响应链、截图 | `ui_capture`、`ui_snapshot`、`ui_inspect_view`、`ui_screenshot` |
+| UIKit / SwiftUI 检查 | 窗口与场景、视图树、无障碍语义节点、坐标命中、约束、截图 | `ui_capture`、`ui_snapshot`、`ui_inspect_view`、`ui_screenshot` |
 | Objective-C | 类、方法、属性、实例变量、IMP、对象元数据、头文件生成 | `objc_dump_class`、`objc_get_methods`、`objc_generate_header` |
+| Swift / 原生运行时 | 有界 Swift 类型、实例参数、显式签名调用、C/C++ 字段与追踪 | `swift_runtime`、`runtime_native` |
 | 动态分析 | 持久 Frida 会话、观察型 Hook、有界事件与调用栈 | `frida_attach`、`frida_trace_method`、`frida_get_events` |
 | 静态分析 | 可选无界面 IDA、反汇编、Hex-Rays 伪代码、交叉引用、运行时地址关联 | `ida_open_binary`、`ida_decompile`、`ida_resolve_runtime_address` |
 | Tweak 开发 | 可编辑 Logos 项目、ABI 校验、Theos 构建、直接安装、SSH 重启及真机操作 | `tweak_create_project`、`tweak_build`、`tweak_deploy` |
@@ -33,7 +34,7 @@ vesper 将 MCP 客户端与 SSH、Frida 及可选的正版 IDA 连接起来，�
 
 完整工具与必填字段见[工具参考](docs/TOOLS.md)。
 
-默认 `tool_profile="focused"` 只加载 20 个常用工具；完整 71 个底层能力可通过
+默认 `tool_profile="focused"` 只加载 20 个常用工具；完整 74 个底层能力可通过
 `platform_tool(name=..., action="schema")` 按需查询和调用，也可设为 `"full"`
 直接展示。将 `skills/vesper-ios` 复制到 Agent 的技能目录（Codex 为
 `~/.codex/skills/vesper-ios`），即可按需加载操作流程，减少常驻 schema 和上下文。
@@ -146,8 +147,8 @@ Target-Action、约束等信息按需获取。可见性考虑祖先隐藏、累�
 
 ### 自动化操作与实例参数
 
-`ui_automate` 在一次 MCP 调用、一次 Frida RPC 中复用/挂载会话，并执行最多 20 个步骤：
-`tap`、`back`、`input_text`、`scroll`、`assert`、`wait_for`。目标可指定已获取的
+`ui_automate` 在一次 MCP 调用中复用/挂载会话，语义批处理仍只用一次 Frida RPC，执行最多 20 个步骤：
+`tap`、`back`、`input_text`、`scroll`、`assert`、`wait_for` 和 `accessibility`。目标可指定已获取的
 `view_id`、唯一的 identifier/class/text 选择器，或窗口 UIKit 点坐标。
 
 ```json
@@ -159,7 +160,7 @@ Target-Action、约束等信息按需获取。可见性考虑祖先隐藏、累�
 
 点击通过 UIControl 事件或 accessibility activation 实现；返回通过导航栈 pop/模态 dismiss，
 滚动修改 UIScrollView 偏移，输入设置文本并发送变更通知。无需部署额外设备服务。
-当前不模拟任意触摸手势、系统按键或键盘/输入法事件。完整示例和限制见
+物理手势走下述可选 SSH 输入后端。完整示例和限制见
 [自动化与实例参数](docs/AUTOMATION.md)。
 分页 Feed 可用 `scroll` 的 `pages: 1/-1` 前进或后退，设备端读取当前滚动区域的页高，
 无需预先查询屏幕尺寸。复用已有 `view_id` 可避免再次遍历；按需设置 `animated: true`
@@ -174,7 +175,44 @@ Target-Action、约束等信息按需获取。可见性考虑祖先隐藏、累�
 已有对象时用 `object_ids` 替代 `class_name`，可批量读取不同类的对象而不扫描堆。
 返回 `snapshot_id` 的后续分页不访问设备。默认最多读取前 8 个 ivar、20 个实例、每页 10 行；
 Foundation 值有深度、长度和数量上限，敏感字段脱敏。不调用任意 getter/description；
-计算属性、纯 Swift 实例和无限制原始内存读取不在支持范围内。
+此 Objective-C 查询不调用任意 getter；纯 Swift 和显式原生内存操作使用对应的高级工具。
+
+### SwiftUI、纯 Swift 与原生操作
+
+`ui_capture` 默认 `backend="auto"`，在 SwiftUI Hosting View 暴露公共无障碍容器时补充语义节点；
+`backend="accessibility"` 读取语义树。这些节点复用快照分页及 `view_id` 租约，可执行点击和
+`accessibility` 的 activate/increment/decrement/escape/scroll。文字仍需显式选择。
+该方式不重建 SwiftUI 内部 View/State 图，也不全局开启 VoiceOver。
+
+新增高级工具按需通过 `platform_tool` 加载，默认仍只展示 20 个常用工具：
+
+| 工具 | 能力 |
+| --- | --- |
+| `swift_runtime` | 能力查询、指定 Mach-O `images` 的类型元数据、选定实例 getter 值、显式 Swift ABI 调用、参数追踪、ARC 释放及重置 |
+| `runtime_native` | 单镜像符号过滤、已知偏移的字段读取、有界内存读写、C ABI 调用、整数/指针参数和返回值追踪 |
+| `input_setup` | 检查可选 ZXTouch；从匹配的本地 deb 安装，显式 `activate=true` 会重启 SpringBoard |
+
+```json
+{"name":"swift_runtime","arguments":{"device_id":"iphone","bundle_id":"dev.fixture","action":"types","images":["MyFramework"],"kind":"classes","query":"Player","limit":5}}
+```
+
+官方 **frida-swift-bridge 3.0.2** 仍属实验阶段。本项目将其导入时的全进程扫描改为按需、
+按镜像、有类型预算的加载（默认 1000）；默认镜像为主程序与 libswiftCore。能力查询不加载桥接，
+后续查询复用元数据与原有 Frida 会话。`reset` 只重置 Swift 后端。
+`inspect(kind="class", address=…, field_names=[…])` 只执行明确选择的 getter。
+类句柄使用 Swift ARC，随对象 TTL 过期，最多 128 个；执行中的调用保护输入引用。
+结构体/枚举存储为借用，只返回标量值、tag 或类型摘要，不持久保存含 ARC 字段的裸副本。
+泛型、async、去符号和浮点调用约定仍可能不支持，也不自动扫描纯 Swift 堆。
+
+C/C++ 操作要求已知 C ABI 签名，成员调用显式传入 `this` 指针；字段偏移从 IDA/调试器取得。
+返回指针与临时 C 字符串均为借用，不能猜测 ABI 或把临时字符串交给异步持有的函数。
+
+`ui_automate` 的 `swipe`、`long_press` 和 `gesture`（1–5 指轨迹，可表达捏合/旋转）
+走可选 ZXTouch，通过现有 SSH 连接的回环通道通信。`input_backend="touch"` 也可将
+点击/文字/滚动改为物理输入。原始坐标采用**当前朝向的屏幕 UIKit 点**；不要求采集时无需挂载 Frida。
+尺寸与缩放按 SSH 连接缓存，朝向刷新；取消会尝试补齐抬指。服务确认不等于目标界面符合预期。
+默认 UIKit/无障碍操作无需新增设备服务，缺失输入后端时 `input_setup` 返回组件安装提示。
+不引入 VNC。按需阅读 [Swift/原生/输入 Skill 指南](skills/vesper-ios/references/swift-native-input.md)。
 
 ### 使用底层工具检查应用
 
@@ -296,7 +334,7 @@ uv sync --frozen --all-extras --no-editable --reinstall-package vesper
 - 审批绑定具体操作参数和产物，具有有效期且只能使用一次。MCP 客户端不能自行授予审批。
 - 工具具有操作限额、结构化错误、审计记录和清理机制。MCP 不开放任意 Shell 命令或注入 JavaScript 的入口。
 - UIKit 访问、对象持有/释放和 PNG 编码均在主队列执行。对象租约会过期或被淘汰，仍保持 2048 个对象上限；共享引用及执行中的操作引用会受到保护。
-- 主要目标为 UIKit 和 Objective-C。Swift 可见性取决于 Objective-C 互操作性；完整 Swift 元数据与 SwiftUI 重建不在当前能力范围内。
+- UIKit/Objective-C、SwiftUI 暴露的无障碍语义、实验性 Swift 和显式原生 ABI 分后端处理。不保证完整 Swift 元数据、SwiftUI 重建或所有泛型/async 签名。
 - 运行时与静态地址关联要求镜像身份、架构及段范围证据匹配。推断类型与伪代码会明确标记。
 
 请妥善保管本地配置、密钥、状态数据库、追踪记录和截图。审批与回滚行为见[安全与恢复](docs/SECURITY.md)。

@@ -28,11 +28,16 @@ from vesper.tools import (
     dump,
     dynamic,
     instances,
+    native,
     platform,
     runtime,
     static,
+    swift,
     tweak,
     ui,
+)
+from vesper.tools import (
+    input as input_tools,
 )
 from vesper.tools.models import Empty, JobRequest
 from vesper.workflows import develop_tweak
@@ -48,6 +53,9 @@ def create_server(app: Application) -> Server[Any, Any]:
     instances.register(app)
     ui.register(app)
     automation.register(app)
+    swift.register(app)
+    input_tools.register(app)
+    native.register(app)
     debug.register(app)
     decrypt.register(app)
     tweak.register(app)

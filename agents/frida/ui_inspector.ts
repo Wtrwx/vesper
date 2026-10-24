@@ -1,4 +1,5 @@
 import ObjC from "frida-objc-bridge";
+import * as accessibility from "./accessibility.js";
 import { Args, array, nullableString, objectFor, objectId, ObjectLimitError } from "./common.js";
 
 function rect(value: any): Args {
@@ -133,14 +134,15 @@ function describe(view: ObjC.Object, includeText: boolean, detailed = false, fie
 
 export function snapshot(args: Args, windowInfo = windows()): Args {
   const started = Date.now();
-  const roots: ObjC.Object[] = args.root_view_id ? [viewFor(args.root_view_id)] : windowInfo.windows.map((w: Args) => objectFor(w.view_id));
+  const roots: ObjC.Object[] = args.root_view_id ? [args.backend === "accessibility" ? objectFor(args.root_view_id) : viewFor(args.root_view_id)] : windowInfo.windows.map((w: Args) => objectFor(w.view_id));
+  if (args.backend === "accessibility") return accessibility.snapshot(args, roots);
   const queue = roots.map(view => ({ view, depth: 0, parent_id: null as string | null, ancestors: ancestry(view) }));
   const nodes: Args[] = [], visited = new Set<string>(), owners = new Map<string, Args | null>();
   const depthLimit = args.depth ?? 8, maximum = args.max_nodes ?? 1000;
   const detail = args.format === "detail", visibleOnly = args.visible_only ?? true, controlsOnly = args.controls_only ?? true;
   const fields: string[] = args.fields || [...(detail ? detailFields : summaryFields), ...(args.include_text ? ["text"] : [])];
-  let truncated = false, index = 0, objectLimit = false;
-  for (; index < queue.length && visited.size < maximum; index++) {
+  let truncated = false, index = 0, objectLimit = false, accessibleVisited = 0;
+  for (; index < queue.length && visited.size + accessibleVisited < maximum; index++) {
     const { view, depth, parent_id, ancestors } = queue[index];
     if (visited.has(view.handle.toString())) continue;
     visited.add(view.handle.toString());
@@ -174,6 +176,17 @@ export function snapshot(args: Args, windowInfo = windows()): Args {
         objectLimit = true; break;
       }
     }
+    if (args.backend !== "uikit" && /SwiftUI|HostingView/.test(view.$className) && depth < depthLimit && visited.size + accessibleVisited < maximum) {
+      const accessible = accessibility.snapshot({ ...args, max_nodes: maximum - visited.size - accessibleVisited }, [view], selectedParent, depth, true);
+      accessibleVisited += accessible.total_visited;
+      objectLimit ||= accessible.object_limit_reached;
+      truncated ||= accessible.truncated;
+      if (accessible.views.length) {
+        nodes.push(...accessible.views); truncated ||= accessible.truncated;
+        if (nodes.length >= maximum) { truncated = true; break; }
+        continue;
+      }
+    }
     const children = array(view.subviews(), maximum + 1);
     if (depth < depthLimit) for (const child of children) {
       if (queue.length >= maximum * 2) { truncated = true; break; }
@@ -182,13 +195,16 @@ export function snapshot(args: Args, windowInfo = windows()): Args {
     } else if (children.length) truncated = true;
   }
   // Return the full bounded capture once. The host pages its immutable copy.
-  return { ...(detail ? windowInfo : {}), views: nodes, total_visited: visited.size,
+  return { ...(detail ? windowInfo : {}), views: nodes, total_visited: visited.size + accessibleVisited,
     captured_at: new Date(started).toISOString(), collection_ms: Date.now() - started,
     truncated: truncated || index < queue.length, object_limit_reached: objectLimit,
-    coordinate_space: "screen_frame is in window UIKit points; frame is in superview points", session_scoped: true, observed: true };
+    coordinate_space: "UIKit screen_frame: window points; accessibility screen_frame: screen points; UIKit frame: superview points", session_scoped: true, observed: true };
 }
 
-export function inspectView(args: Args): Args { return describe(viewFor(args.view_id), !!args.include_text, true, args.fields); }
+export function inspectView(args: Args): Args {
+  const object = objectFor(args.view_id);
+  return accessibility.isElement(object) ? accessibility.describe(object, args) : describe(viewFor(args.view_id), !!args.include_text, true, args.fields);
+}
 
 export function constraints(args: Args): Args {
   const view = viewFor(args.view_id);

@@ -20,6 +20,7 @@ function runtime() {
     isKindOfClass_: cls => cls.name === 'UIViewController', nextResponder: () => null,
     presentedViewController: () => null, navigationController: () => null, presentingViewController: () => null };
   function view(name, opts = {}) {
+    classes[name] ||= classes.UIView;
     const object = { handle: address(++serial), $className: name, children: [], parent: null, retains: 0, releases: 0,
       retain() { this.retains++; }, release() { this.releases++; },
       isKindOfClass_: cls => cls.name === name || cls.name === 'NSObject' || (cls.name === 'UIView' && name !== 'NSObject') || (cls.name === 'UIControl' && ['UIButton', 'UITextField', 'UISwitch'].includes(name)),
@@ -68,11 +69,13 @@ function runtime() {
   }
   const common = load('common.ts', {});
   common.state.session = 'process_test';
-  const ui = load('ui_inspector.ts', { './common.js': common });
-  const automation = load('automation.ts', { './common.js': common, './ui_inspector.js': ui });
+  classes.UIScreen = { mainScreen: () => ({ bounds: () => [[0, 0], [400, 800]] }) };
+  const accessibility = load('accessibility.ts', { './common.js': common });
+  const ui = load('ui_inspector.ts', { './common.js': common, './accessibility.js': accessibility });
+  const automation = load('automation.ts', { './common.js': common, './ui_inspector.js': ui, './accessibility.js': accessibility });
   const objcRuntime = load('objc_runtime.ts', { './common.js': common });
   global.NULL = null;
-  return { common, ui, automation, objcRuntime, heap, chooseCalls, view, add, root, controller, reads: () => ({ responderReads, textReads, windowsReads }) };
+  return { common, ui, accessibility, automation, objcRuntime, heap, chooseCalls, view, add, root, controller, reads: () => ({ responderReads, textReads, windowsReads }) };
 }
 
 function scope(r, id, fn, args = {}) { return r.common.withObjectLease({ _lease_id: id, _lease_ttl: 60, ...args }, fn); }
@@ -366,4 +369,31 @@ test('wait_for retries a leased hidden target and value budgets cap nested expan
   assert.equal(values.values_truncated, true); assert.ok(JSON.stringify(values).length < 100000);
   const shallow = scope(r, 'depth_zero', () => r.objcRuntime.readObject(object, { field_names: ['_struct'], max_depth: 0 }));
   assert.deepEqual(shallow.values._struct, { array_length: 2 });
+});
+
+test('SwiftUI semantic nodes share snapshot leases, respect hidden ancestors and activate without UIView', () => {
+  const r = runtime(), host = r.add(r.root, r.view('SwiftUI.HostingView'));
+  let activated = 0;
+  const element = r.view('NSObject');
+  Object.assign(element, {
+    $className: 'SwiftUI.AccessibilityNode',
+    accessibilityFrame: () => [[20, 30], [90, 40]],
+    accessibilityTraits: () => 1,
+    isAccessibilityElement: () => true,
+    accessibilityLabel: () => 'Open',
+    accessibilityActivate: () => { activated++; return true; },
+    respondsToSelector_: selector => ['accessibilityFrame', 'accessibilityTraits', 'isAccessibilityElement', 'accessibilityLabel', 'accessibilityIdentifier', 'accessibilityActivate'].includes(selector),
+  });
+  host.respondsToSelector_ = selector => selector === 'accessibilityElements';
+  host.accessibilityElements = () => ({ count: () => 1, objectAtIndex_: () => element });
+  const capture = scope(r, 'ax', () => r.ui.snapshot({ backend: 'auto', include_text: true, depth: 8 }));
+  const row = capture.views.find(v => v.backend === 'accessibility');
+  assert.equal(row.text, 'Open'); assert.equal(row.class_name, 'SwiftUI.AccessibilityNode');
+  scope(r, 'tap', () => r.automation.step({ action: 'tap', target: { view_id: row.view_id } }));
+  assert.equal(activated, 1); assert.equal(element.retains, 1);
+  r.common.releaseLease('ax'); assert.equal(element.releases, 0);
+  r.common.releaseLease('tap'); assert.equal(element.releases, 1);
+  host.isHidden = () => true;
+  const hidden = scope(r, 'hidden', () => r.ui.snapshot({ backend: 'accessibility' }));
+  assert.ok(!hidden.views.some(v => v.class_name === 'SwiftUI.AccessibilityNode'));
 });

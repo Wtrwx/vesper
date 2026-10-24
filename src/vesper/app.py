@@ -12,6 +12,7 @@ from vesper.adapters.frida import FridaAdapter
 from vesper.adapters.ida import IDAAdapter
 from vesper.adapters.ssh import SSHAdapter
 from vesper.adapters.theos import TheosAdapter
+from vesper.adapters.touch import TouchAdapter
 from vesper.config import Settings
 from vesper.core.jobs import Jobs
 from vesper.core.permissions import Permissions
@@ -32,6 +33,7 @@ class Application:
         self.registry.invalidate_live_sessions()
         self.permissions = Permissions(settings, self.registry)
         self.ssh = SSHAdapter(settings)
+        self.touch = TouchAdapter(self.ssh)
         self.frida = FridaAdapter(settings, self.registry)
         self.frida.probe = self.ssh.probe
         self.frida.on_device_lost = self.ssh.invalidate_probe

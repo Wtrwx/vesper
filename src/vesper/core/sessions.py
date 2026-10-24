@@ -20,6 +20,7 @@ class ProcessSession:
     pid: int
     handle: Any
     script: Any = None
+    swift_script: Any = None
     active: bool = True
     reason: str | None = None
     sequence: int = 0

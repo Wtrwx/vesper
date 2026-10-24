@@ -33,7 +33,7 @@ function runtime() {
   const disposal = { dispose: () => stopped++ };
   load('index.ts', { './common.js': common, './objc_runtime.js': {}, './ui_inspector.js': {},
     './tracer.js': disposal, './automation.js': {}, './logging.js': disposal,
-    './debugger.js': debuggerTools, './decrypt.js': {} });
+    './debugger.js': debuggerTools, './decrypt.js': {}, './native.js': { dispose() {} } });
   return { common, queued, timers, dispatch: rpc.exports.dispatch, counts: () => ({ drains, stopped }) };
 }
 

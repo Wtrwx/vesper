@@ -24,10 +24,12 @@ from vesper.tools.models import (
 ViewField = Literal['view_id', 'class_name', 'frame', 'screen_frame', 'parent_id', 'depth',
                     'interactive', 'accessibility_identifier', 'text', 'bounds', 'is_button',
                     'hidden', 'alpha', 'effective_alpha', 'visible', 'user_interaction_enabled',
-                    'controller', 'targets', 'superview_id', 'subviews', 'translates_autoresizing_mask', 'observed']
+                    'controller', 'targets', 'superview_id', 'subviews', 'translates_autoresizing_mask', 'observed',
+                    'backend', 'accessibility_traits', 'accessibility_actions', 'accessibility_value']
 
 
 class CaptureOptions(StrictModel):
+    backend: Literal['auto', 'uikit', 'accessibility'] = 'auto'
     root_view_id: str | None = None
     depth: int = Field(default=8, ge=0, le=30)
     max_nodes: int = Field(default=1000, ge=1, le=2000)
@@ -182,7 +184,7 @@ def register(app: Application) -> None:
     ]
     for name, model, operation, description in definitions:
         app.tools.add(name, model, rpc(operation), description)
-    app.tools.add('ui_snapshot', Snapshot, collect('snapshot'), 'Capture a fresh bounded UIKit summary. Reuse snapshot_id + offset for immutable pages without device access. Text is opt-in; format=detail or fields selects extra metadata.')
+    app.tools.add('ui_snapshot', Snapshot, collect('snapshot'), 'Capture a fresh bounded UI summary. backend=auto includes SwiftUI accessibility containers; accessibility selects the semantic tree. Reuse snapshot_id + offset for immutable pages without device access. Text is opt-in; format=detail or fields selects metadata.')
     app.tools.add('ui_find_views', FindViews, collect('find_views'), 'Filter views on the device; reuse snapshot_id for immutable result pages. Text query/capture is explicit.')
     app.tools.add('ui_capture', Capture, capture, 'One-call allowlisted app capture with automatic session reuse/attach. Required mode=summary, screenshot or both; screenshots and text require explicit selection. Summary returns snapshot_id for paging.')
     app.tools.add('ui_screenshot', Screenshot, screenshot, 'Capture an explicitly requested bounded PNG as a local artifact and native MCP image when UIKit rendering is available.')

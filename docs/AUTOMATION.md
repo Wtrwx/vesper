@@ -6,7 +6,7 @@
 ## 批量操作
 
 `ui_automate(device_id, bundle_id, steps, after_capture="none")` 将整批步骤放在一次 MCP 调用、
-一次 Frida RPC 中执行。每次 UIKit 访问均调度到主线程；等待通过异步定时器完成，避免阻塞主线程。
+语义批次在一次 Frida RPC 中执行。每次 UIKit 访问均调度到主线程；等待通过异步定时器完成，避免阻塞主线程。
 默认不等待、不截图、不读取文字。已验证会话会复用，没有隐式应用启动或重启。
 
 | action | 主要参数 | 实际行为 |
@@ -55,8 +55,9 @@
 取消或 dispose 会阻止后续步骤，已完成的操作保留。会话及输入对象在等待期间保持引用。
 
 本后端执行 UIKit 语义操作。自定义 UIView 可使用其 accessibility activation；仅依赖原始
-触摸/手势的视图会明确返回不支持。滚动不会产生 pan 触摸序列，文本设置不会模拟键盘/IME，
-返回不会合成边缘手势。系统主屏幕、跨 App、任意 HID 触摸不在此次选择的 Frida 部署范围内。
+触摸/手势的视图可选择可选的 SSH 输入后端；语义滚动不会产生 pan 触摸序列，文本设置不会模拟键盘/IME，
+语义返回不会合成边缘手势。`swipe`、`long_press`、多指 `gesture` 及 `input_backend="touch"`
+使用外部 ZXTouch；原始坐标无需挂载 Frida。缺失组件时调用 `input_setup` 取得安装提示。
 动画结束、异步网络请求、tweak hook 生效仍需根据实际状态检查。
 
 分页 Feed 可用 `pages: 1` 前进、`pages: -1` 返回；距离直接取所选 UIScrollView 当前的
@@ -114,7 +115,7 @@ NSString/NSNumber、NSArray/NSDictionary、NSData 长度按需有界序列化；
 
 堆发现仍调用 Frida 的 allocator 扫描，可能暂停应用；限制结果数量不等于限制底层扫描时间。
 已知对象优先使用 `object_ids`，已采集结果优先使用游标。并发修改的字段不能保证跨对象原子一致。
-纯 Swift、计算属性、任意 getter/description 和无限制内存读取不支持。
+此 Objective-C 查询不执行任意 getter/description。纯 Swift 使用 `swift_runtime`；C/C++ 参数和显式有界内存操作使用 `runtime_native`，均通过 `platform_tool` 按需加载。
 
 ## 参考与验证
 
@@ -125,3 +126,7 @@ NSString/NSNumber、NSArray/NSDictionary、NSData 长度按需有界序列化；
 
 默认只在真机操作当前修改涉及的控件。不要追加本地冒烟、采样或长回归；
 首次关键失败后停止并修正。
+
+SwiftUI 无障碍语义、Swift 镜像范围及 ABI 限制、原生字段和输入后端选择见
+[按需 Skill 指南](../skills/vesper-ios/references/swift-native-input.md)。
+默认仍采用原有 Frida 部署，不安装 VNC；仅在物理手势需要时安装输入组件。

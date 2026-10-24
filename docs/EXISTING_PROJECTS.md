@@ -43,3 +43,19 @@ bounded UI searches, safe trace events, allowlists/approvals/auditing, editable
 Logos recipes, build diagnostics, transactional deployment and evidence-based
 behavior checks. Upstream capabilities do not imply that these integrations have
 passed a physical-iPhone test.
+
+### Swift and physical input extension (2026-10-25)
+
+- The official [frida-swift-bridge](https://github.com/frida/frida-swift-bridge)
+  3.0.2 (Apache-2.0) supplies typed Swift ABI/value support. Its eager Mach-O and
+  conformance scans were unsuitable for a reused low-overhead app session.
+  `scripts/prepare_swift_bridge.py` applies a reproducible lazy image-scope patch;
+  metadata-only queries avoid constructing every class's accessor wrappers.
+  The bridge remains experimental; unsupported generic/async/stripped signatures
+  are not guessed. SwiftUI uses public app accessibility containers rather than
+  reconstructing SwiftUI internal state.
+- [ZXTouch Rootless](https://github.com/Epic0001/zxtouchrootless) defines the
+  external input protocol (TCP 6000, CRLF task frames, tenths-of-pixel touches).
+  Vesper implements a separate bounded client over SSH loopback, converts oriented
+  UIKit points and cleans up fingers on cancellation. The GPL service/package is
+  not bundled. Default UIKit/accessibility operations require no new input service.

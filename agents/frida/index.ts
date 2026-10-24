@@ -6,6 +6,7 @@ import * as automation from "./automation.js";
 import * as logging from "./logging.js";
 import * as debuggerTools from "./debugger.js";
 import * as decrypt from "./decrypt.js";
+import * as native from "./native.js";
 
 const methods: { [name: string]: (args: Args) => any } = {
   hook_method: tracer.hookMethod,
@@ -21,6 +22,7 @@ const methods: { [name: string]: (args: Args) => any } = {
   find_views: ui.findViews,
   screenshot: ui.screenshot,
   capture: ui.capture,
+  touch_target: automation.touchTarget,
   release_leases: objectStats,
   search_classes: runtime.searchClasses,
   dump_class: runtime.dumpClass,
@@ -53,6 +55,11 @@ rpc.exports = {
         return identity;
       }
       if (!state.session) throw new Error("Initialize the process session first");
+      if (name === "swift_capabilities") return { available: Process.arch === "arm64" && Process.platform === "darwin" && !!Process.findModuleByName("libswiftCore.dylib"),
+        bridge: "frida-swift-bridge", experimental: true, default_images: [Process.mainModule.name, "libswiftCore.dylib"],
+        actions: ["types", "inspect", "call", "trace", "untrace", "release", "reset"],
+        limitations: ["Bounded explicitly selected Mach-O images", "Generic/async/stripped signatures may be unsupported", "No automatic pure-Swift heap enumeration", "Struct storage is borrowed; no persistent value handles"] };
+      if (name === "native_runtime") return args.main_thread ? await main(() => native.run(args)) : native.run(args);
       if (name === "app_logs") return await logging.run(args);
       if (name === "debug_inspect") return debuggerTools.inspect(args);
       if (name === "decrypt_modules") return decrypt.modules();
@@ -79,7 +86,7 @@ rpc.exports = {
         state.disposing = true;
         if (leaseTimer !== null) clearInterval(leaseTimer);
         leaseTimer = null;
-        tracer.dispose(); logging.dispose();
+        tracer.dispose(); logging.dispose(); native.dispose();
         // A debugger/log-only session has no UIKit retains to drain. Sessions
         // with UI handles still release their final references on the main queue.
         if (state.objects.size) await main(() => releaseObjects());

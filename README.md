@@ -31,7 +31,8 @@ decryption + classdumpc/IDA, SSH tweak work and fallback debugging.
 | Devices | SSH/SFTP, device discovery, app and process enumeration | `device_connect`, `device_info`, `device_list_apps` |
 | UIKit | Windows and scenes, view trees, hit testing, constraints, responder chains, screenshots | `ui_capture`, `ui_snapshot`, `ui_inspect_view`, `ui_screenshot` |
 | Objective-C | Classes, methods, properties, ivars, IMPs, object metadata, generated headers | `objc_dump_class`, `objc_get_methods`, `objc_generate_header` |
-| App automation | Batched UIKit tap/back/text/scroll/wait/assert and selected live instance values | `ui_automate`, `objc_query_instances` |
+| App automation | Batched UIKit/SwiftUI accessibility actions; optional physical gestures over SSH | `ui_automate`, `input_setup` |
+| Swift and native | Scoped Swift metadata/values/calls/hooks; selected native fields and C/C++ ABI operations | `swift_runtime`, `runtime_native`, `objc_query_instances` |
 | Debugging | Bounded app logs, Frida threads/registers/stacks, optional LLDB locals and component setup | `app_logs`, `debug_inspect`, `debug_setup` |
 | Decryption / headers | Reused-session frida-ios-dump, verified Mach-O, actual classdumpc or runtime headers | `app_decrypt`, `objc_dump` |
 | Dynamic analysis | Persistent Frida sessions, observation hooks, bounded events and call stacks | `frida_attach`, `frida_trace_method`, `frida_get_events` |
@@ -119,7 +120,7 @@ for Codex, Claude Code and Cursor examples.
 The default `tool_profile="focused"` advertises 20 common tools. Advanced
 primitives remain available through `platform_tool`: request one schema with
 `action="schema"`, then call it with `arguments`. `tool_profile="full"` advertises
-all 71 primitives. Copy `skills/vesper-ios` into your agent skill directory
+all 74 primitives. Copy `skills/vesper-ios` into your agent skill directory
 (for Codex, `~/.codex/skills/vesper-ios`) to load workflows on demand.
 
 Structured results are returned once in `structuredContent`, with a short text
@@ -178,8 +179,8 @@ eviction possible under the 2048-object device bound.
 ### Automate the app and read instance values
 
 `ui_automate` reuses/attaches the verified app session and runs up to 20 actions in
-one MCP call and one Frida RPC. Supported actions are `tap`, `back`, `input_text`,
-`scroll`, `assert` and `wait_for`. Targets accept a leased `view_id`, a unique
+one MCP call (one Frida RPC for a semantic batch). Supported actions include `tap`, `back`, `input_text`,
+`scroll`, `assert`, `wait_for` and semantic `accessibility` operations. Targets accept a leased `view_id`, a unique
 identifier/class/text selector, or window coordinates in UIKit points.
 
 ```json
@@ -193,8 +194,8 @@ batch. Post-capture defaults to `none`; text and PNGs remain explicit.
 Tap dispatches UIKit control events or accessibility activation. Back pops a
 navigation controller or dismisses a modal; scroll adjusts UIScrollView offsets;
 input sets UITextField/UITextView text and emits change events. These semantics
-cover app testing without additional device services. Arbitrary touch/gesture,
-keyboard/IME and system-wide event injection are outside this backend. See
+cover app testing without additional device services. Physical gestures use the optional
+SSH input backend described below. See
 [automation and value queries](docs/AUTOMATION.md) for examples and limits.
 Paged feeds accept `scroll` with `pages: 1` or `pages: -1`; distance comes from
 the current scroll viewport on-device. Reuse its observed view ID and opt into
@@ -211,8 +212,55 @@ Use `object_ids` instead of `class_name` to read already leased objects, includi
 different classes, without scanning the heap. Pages use the returned
 `snapshot_id` and never revisit the device. Default reads cover at most 8 ivars,
 20 instances, 10 rows per page, bounded Foundation values and redacted sensitive
-fields. No arbitrary getter or `description` is invoked. Computed properties,
-pure Swift instances and unrestricted raw memory are not exposed.
+fields. This Objective-C query invokes no arbitrary getter or `description`. Pure Swift
+and explicitly typed native operations use their own advanced tools below.
+
+### SwiftUI, pure Swift and native operations
+
+`ui_capture` defaults to `backend="auto"`: UIKit summaries gain public SwiftUI
+accessibility-container nodes when exposed. `backend="accessibility"` selects
+that semantic tree. Its leased IDs share the existing snapshot cache and work
+with `ui_automate` tap or `action="accessibility"` operations: activate, increment,
+decrement, escape and scroll. Text remains opt-in. This does not reconstruct the
+SwiftUI internal view/state graph or enable VoiceOver globally.
+
+Advanced tools remain behind `platform_tool`; focused discovery stays at 20 tools.
+
+| Tool | Use |
+| --- | --- |
+| `swift_runtime` | Runtime capabilities; bounded type metadata in selected Mach-O `images`; selected instance getter values; explicitly typed Swift calls and argument traces; ARC release/reset |
+| `runtime_native` | Filtered symbols in one module; fields at known offsets; bounded explicit memory read/write; C ABI calls; integer/pointer argument and return traces |
+| `input_setup` | Check/install the optional external ZXTouch component from a matching local deb; explicit `activate=true` restarts SpringBoard |
+
+```json
+{"name":"swift_runtime","arguments":{"device_id":"test","bundle_id":"dev.fixture","action":"types","images":["MyFramework"],"kind":"classes","query":"Player","limit":5}}
+```
+
+The official **frida-swift-bridge 3.0.2** is experimental. Vesper patches its
+import-time whole-process scan into lazy image-scoped discovery with a type budget
+(default 1000); default scope is the main executable and libswiftCore. Capability
+queries do not load the bridge. It reuses the native Frida session, caches metadata,
+and can reset independently. `inspect(kind="class", address=…, field_names=[…])`
+executes only explicitly requested getters. Retained class handles use Swift ARC,
+expire with the configured object TTL, and are capped at 128; active calls protect
+inputs. Struct/enum storage is borrowed; scalar values/tag summaries need no deep
+copy or retained handle. Generic, async, stripped and floating-point signatures
+can remain unsupported. There is no automatic pure-Swift heap scan.
+
+Native calls require a known C ABI signature; C++ member calls require an explicit
+`this` pointer. Read selected fields with known offsets from IDA/debugger evidence.
+Return pointers and temporary C strings are borrowed. Do not guess an ABI.
+
+`swipe`, `long_press` and `gesture` (1–5 finger paths for pinch/rotation/custom
+motion) route through optional ZXTouch over an SSH loopback channel. Set
+`input_backend="touch"` for physical tap/text/scroll. Raw coordinates use oriented
+**screen UIKit points** and need no Frida attach when no observation is requested.
+Screen size/scale are cached per SSH connection; orientation stays fresh. Cancellation
+attempts finger-up cleanup. A service acknowledgement confirms processing, not
+application behavior. The default UIKit/accessibility route needs no new service.
+ZXTouch is external, not bundled; `input_setup` returns actionable installation
+hints when unavailable. No VNC is required. See the on-demand
+[Swift/native/input skill guide](skills/vesper-ios/references/swift-native-input.md).
 
 ### Inspect using the lower-level tools
 
@@ -360,7 +408,7 @@ when its TypeScript source changes. Generate tool documentation with
 - Approvals bind exact operation arguments and artifacts, expire, and can be consumed once. MCP clients cannot grant their own approvals.
 - Tools expose bounded operations with structured errors, audit records and cleanup. Arbitrary shell commands and injected JavaScript are not exposed through MCP.
 - UIKit operations, object retain/release and PNG encoding run on the main queue. Object leases expire or are evicted within the existing 2048-object bound; shared and executing operation references remain protected.
-- UIKit and Objective-C are the primary inspection targets. Swift visibility depends on Objective-C interoperability; complete Swift metadata and SwiftUI reconstruction are outside the current scope.
+- UIKit/Objective-C, exposed SwiftUI accessibility, scoped experimental Swift and explicit native ABI operations use separate backends. Complete Swift metadata/SwiftUI reconstruction and all generic/async signatures are not guaranteed.
 - Runtime/static address correlation requires matching image identity, architecture and segment evidence. Inferred types and pseudocode are labeled accordingly.
 
 Keep local configs, keys, state databases, traces and screenshots private. See

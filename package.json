@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "frida-objc-bridge": "^8.0.0"
+    "frida-objc-bridge": "^8.0.0",
+    "frida-swift-bridge": "3.0.2"
   },
   "devDependencies": {
     "@types/frida-gum": "^19.0.0",

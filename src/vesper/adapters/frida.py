@@ -291,16 +291,31 @@ class FridaAdapter:
         async with session.lock:
             self.session(session.device_id, session.id)
             try:
-                releases = list(self.pending_releases.pop(session.id, set()))
+                swift = method == 'swift_runtime'
+                if swift and arguments.get('action') == 'reset':
+                    await self._dispose_swift(session)
+                    return {'reset': True, 'bridge_loaded': False}
+                capabilities = swift and arguments.get('action') == 'capabilities'
+                if capabilities:
+                    method = 'swift_capabilities'
+                    swift = False
+                if swift:
+                    await self._load_swift(session, arguments)
+                # These independent backends do not enter the UIKit lease scope.
+                # Preserve queued releases for the next UI RPC/maintenance sweep.
+                releases = [] if swift or method in {'native_runtime', 'swift_capabilities'} else list(self.pending_releases.pop(session.id, set()))
                 args = {**arguments, "_release_leases": releases, "_lease_ttl": arguments.get("_lease_ttl", self.settings.object_handle_ttl),
                         '_image_transport': self.settings.screenshot_transport}
-                result = await self._call(lambda: session.script.exports_sync.dispatch(method, args))
+                script = session.swift_script if swift else session.script
+                result = await self._call(lambda: script.exports_sync.dispatch(method, args))
                 if isinstance(result, tuple) and len(result) == 2 and isinstance(result[0], dict) and isinstance(result[1], bytes):
                     result, png = result
                     image = result.get('screenshot', result)
                     image['_png'] = png
                 self.session(session.device_id, session.id)
                 if isinstance(result, dict):
+                    if capabilities:
+                        result['bridge_loaded'] = session.swift_script is not None
                     for expired in result.pop("_expired_leases", []):
                         if self.on_leases_expired:
                             self.on_leases_expired(expired)
@@ -311,7 +326,7 @@ class FridaAdapter:
                     elif method == "unhook":
                         session.hooks.discard(arguments.get("hook_id", ""))
                     elif method == "list_hooks":
-                        log_pins = {pin for pin in session.hooks if pin.endswith(':app_logs')}
+                        log_pins = {pin for pin in session.hooks if pin.endswith(':app_logs') or '.swift_hook.' in pin or '.native_hook.' in pin}
                         session.hooks = {item["hook_id"] for item in result.get("hooks", [])} | log_pins
                     elif method == "app_logs":
                         pin = session.id + ':app_logs'
@@ -319,6 +334,11 @@ class FridaAdapter:
                             session.hooks.add(pin)
                         else:
                             session.hooks.discard(pin)
+                    elif swift or method == 'native_runtime':
+                        if arguments.get('action') == 'trace' and result.get('hook_id'):
+                            session.hooks.add(result['hook_id'])
+                        elif arguments.get('action') == 'untrace':
+                            session.hooks.discard(arguments.get('hook_id', ''))
                 return result if isinstance(result, dict) else {"items": result}
             except MCPError as exc:
                 if exc.code in (Code.TIMEOUT, Code.FRIDA_ERROR):
@@ -331,6 +351,40 @@ class FridaAdapter:
                 session.invalidate("cancelled_rpc", self.registry)
                 await asyncio.shield(self._dispose(session))
                 raise
+
+    async def _load_swift(self, session: ProcessSession, arguments: dict[str, Any]) -> None:
+        # Called under the same RPC lock: concurrent first requests build one
+        # secondary script, while UIKit-only sessions pay no Swift startup cost.
+        if session.swift_script is not None:
+            return
+        asset = files('vesper').joinpath('assets/swift-agent.js')
+        if not asset.is_file():
+            raise MCPError(Code.UNAVAILABLE, 'Swift agent is missing; install a built Vesper wheel or run npm ci && npm run build')
+        script = await self._call(lambda: session.handle.create_script(asset.read_text(), name='vesper-swift'),
+                                  late_cleanup=lambda value: value.unload())
+        session.swift_script = script
+        loop = asyncio.get_running_loop()
+
+        def message(message: dict[str, Any], data: bytes | None = None) -> None:
+            payload = message.get('payload') if message.get('type') == 'send' else None
+            if not isinstance(payload, dict) or len(json.dumps(payload, default=str)) > 32768:
+                return
+            if not loop.is_closed():
+                loop.call_soon_threadsafe(session.event, payload, self.settings.event_limit)
+
+        script.on('message', message)
+        try:
+            await self._call(script.load)
+            initialized = await self._call(lambda: script.exports_sync.dispatch('initialize',
+                {'session_id': session.id, 'ttl': self.settings.object_handle_ttl,
+                 'images': arguments.get('images', []), 'max_types': arguments.get('max_types', 1000)}))
+            if initialized.get('agent_error'):
+                raise MCPError(Code.INVALID_INPUT, initialized['agent_error'])
+        except BaseException:
+            with contextlib.suppress(Exception):
+                await self._call(script.unload)
+            session.swift_script = None
+            raise
 
     def events(self, device_id: str, session_id: str, after: int = 0, limit: int = 100, hook_id: str | None = None) -> dict[str, Any]:
         session = self.sessions.get(session_id)
@@ -371,7 +425,17 @@ class FridaAdapter:
             await self._dispose(session)
         return {"session_id": session_id, "closed": True}
 
+    async def _dispose_swift(self, session: ProcessSession) -> None:
+        if session.swift_script is not None:
+            with contextlib.suppress(Exception):
+                await self._call(lambda: session.swift_script.exports_sync.dispatch('dispose', {}))
+            with contextlib.suppress(Exception):
+                await self._call(session.swift_script.unload)
+            session.swift_script = None
+        session.hooks = {pin for pin in session.hooks if '.swift_hook.' not in pin}
+
     async def _dispose(self, session: ProcessSession) -> None:
+        await self._dispose_swift(session)
         if session.script is not None:
             with contextlib.suppress(Exception):
                 await self._call(lambda: session.script.exports_sync.dispatch("dispose", {}))

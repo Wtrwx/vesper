@@ -1,5 +1,5 @@
 📦
-164121 /agents/frida/index.js
+182376 /agents/frida/index.js
 ✄
 // node_modules/frida-objc-bridge/lib/api.js
 var cachedApi = null;
@@ -21,23 +21,23 @@ function getApi() {
     {
       module: "libobjc.A.dylib",
       functions: {
-        "objc_msgSend": function(address) {
-          this.objc_msgSend = address;
+        "objc_msgSend": function(address2) {
+          this.objc_msgSend = address2;
         },
-        "objc_msgSend_stret": function(address) {
-          this.objc_msgSend_stret = address;
+        "objc_msgSend_stret": function(address2) {
+          this.objc_msgSend_stret = address2;
         },
-        "objc_msgSend_fpret": function(address) {
-          this.objc_msgSend_fpret = address;
+        "objc_msgSend_fpret": function(address2) {
+          this.objc_msgSend_fpret = address2;
         },
-        "objc_msgSendSuper": function(address) {
-          this.objc_msgSendSuper = address;
+        "objc_msgSendSuper": function(address2) {
+          this.objc_msgSendSuper = address2;
         },
-        "objc_msgSendSuper_stret": function(address) {
-          this.objc_msgSendSuper_stret = address;
+        "objc_msgSendSuper_stret": function(address2) {
+          this.objc_msgSendSuper_stret = address2;
         },
-        "objc_msgSendSuper_fpret": function(address) {
-          this.objc_msgSendSuper_fpret = address;
+        "objc_msgSendSuper_fpret": function(address2) {
+          this.objc_msgSendSuper_fpret = address2;
         },
         "objc_getClassList": ["int", ["pointer", "int"]],
         "objc_lookUpClass": ["pointer", ["pointer"]],
@@ -95,8 +95,8 @@ function getApi() {
         "dispatch_async_f": ["void", ["pointer", "pointer", "pointer"]]
       },
       variables: {
-        "_dispatch_main_q": function(address) {
-          this._dispatch_main_q = address;
+        "_dispatch_main_q": function(address2) {
+          this._dispatch_main_q = address2;
         }
       }
     }
@@ -591,15 +591,15 @@ function Runtime() {
     const cachedClasses = /* @__PURE__ */ new Map();
     let numCachedClasses = 0;
     const registry = new Proxy(this, {
-      has(target, property) {
+      has(target2, property) {
         return hasProperty(property);
       },
-      get(target, property, receiver) {
+      get(target2, property, receiver) {
         switch (property) {
           case "prototype":
-            return target.prototype;
+            return target2.prototype;
           case "constructor":
-            return target.constructor;
+            return target2.constructor;
           case "hasOwnProperty":
             return hasProperty;
           case "toJSON":
@@ -613,10 +613,10 @@ function Runtime() {
             return klass !== null ? klass : void 0;
         }
       },
-      set(target, property, value, receiver) {
+      set(target2, property, value, receiver) {
         return false;
       },
-      ownKeys(target) {
+      ownKeys(target2) {
         if (api === null)
           return [];
         let numClasses = api.objc_getClassList(NULL, 0);
@@ -635,7 +635,7 @@ function Runtime() {
         }
         return Array.from(cachedClasses.keys());
       },
-      getOwnPropertyDescriptor(target, property) {
+      getOwnPropertyDescriptor(target2, property) {
         return {
           writable: false,
           configurable: true,
@@ -683,15 +683,15 @@ function Runtime() {
     const cachedProtocols = /* @__PURE__ */ new Map();
     let numCachedProtocols = 0;
     const registry = new Proxy(this, {
-      has(target, property) {
+      has(target2, property) {
         return hasProperty(property);
       },
-      get(target, property, receiver) {
+      get(target2, property, receiver) {
         switch (property) {
           case "prototype":
-            return target.prototype;
+            return target2.prototype;
           case "constructor":
-            return target.constructor;
+            return target2.constructor;
           case "hasOwnProperty":
             return hasProperty;
           case "toJSON":
@@ -705,10 +705,10 @@ function Runtime() {
             return proto !== null ? proto : void 0;
         }
       },
-      set(target, property, value, receiver) {
+      set(target2, property, value, receiver) {
         return false;
       },
-      ownKeys(target) {
+      ownKeys(target2) {
         if (api === null)
           return [];
         const numProtocolsBuf = Memory.alloc(pointerSize);
@@ -729,7 +729,7 @@ function Runtime() {
         }
         return Array.from(cachedProtocols.keys());
       },
-      getOwnPropertyDescriptor(target, property) {
+      getOwnPropertyDescriptor(target2, property) {
         return {
           writable: false,
           configurable: true,
@@ -813,17 +813,17 @@ function Runtime() {
       }
     }
     const self = new Proxy(this, {
-      has(target, property) {
+      has(target2, property) {
         return hasProperty(property);
       },
-      get(target, property, receiver) {
+      get(target2, property, receiver) {
         switch (property) {
           case "handle":
             return handle2;
           case "prototype":
-            return target.prototype;
+            return target2.prototype;
           case "constructor":
-            return target.constructor;
+            return target2.constructor;
           case "hasOwnProperty":
             return hasProperty;
           case "toJSON":
@@ -949,7 +949,7 @@ function Runtime() {
             return cachedIvars;
           default:
             if (typeof property === "symbol") {
-              return target[property];
+              return target2[property];
             }
             if (protocol) {
               const details = findProtocolMethod(property);
@@ -962,10 +962,10 @@ function Runtime() {
             return wrapper;
         }
       },
-      set(target, property, value, receiver) {
+      set(target2, property, value, receiver) {
         return false;
       },
-      ownKeys(target) {
+      ownKeys(target2) {
         if (cachedMethodNames === null) {
           if (!protocol) {
             const jsNames = {};
@@ -985,11 +985,11 @@ function Runtime() {
                     continue;
                   nativeNames[nativeName] = nativeName;
                   const jsName = jsMethodName(nativeName);
-                  let serial2 = 2;
+                  let serial3 = 2;
                   let name = jsName;
                   while (jsNames[name] !== void 0) {
-                    serial2++;
-                    name = jsName + serial2;
+                    serial3++;
+                    name = jsName + serial3;
                   }
                   jsNames[name] = true;
                   const fullName = fullNamePrefix + nativeName;
@@ -1025,7 +1025,7 @@ function Runtime() {
         }
         return ["handle"].concat(cachedMethodNames);
       },
-      getOwnPropertyDescriptor(target, property) {
+      getOwnPropertyDescriptor(target2, property) {
         return {
           writable: false,
           configurable: true,
@@ -1099,24 +1099,24 @@ function Runtime() {
           if (isClass() || kind2 !== "-" || name === "forwardingTargetForSelector:" || name === "methodSignatureForSelector:") {
             return null;
           }
-          let target = self;
+          let target2 = self;
           if ("- forwardingTargetForSelector:" in self) {
             const forwardingTarget = self.forwardingTargetForSelector_(sel2);
             if (forwardingTarget !== null && forwardingTarget.$kind === "instance") {
-              target = forwardingTarget;
+              target2 = forwardingTarget;
             } else {
               return null;
             }
           } else {
             return null;
           }
-          const methodHandle2 = api.class_getInstanceMethod(api.object_getClass(target.handle), sel2);
+          const methodHandle2 = api.class_getInstanceMethod(api.object_getClass(target2.handle), sel2);
           if (methodHandle2.isNull()) {
             return null;
           }
           let types2 = api.method_getTypeEncoding(methodHandle2).readCString();
           if (types2 === null || types2 === "") {
-            types2 = stealTypesFromProtocols(target, fullName);
+            types2 = stealTypesFromProtocols(target2, fullName);
             if (types2 === null)
               types2 = stealTypesFromProtocols(self, fullName);
             if (types2 === null)
@@ -1415,15 +1415,15 @@ function Runtime() {
       }
     });
     const self = new Proxy(this, {
-      has(target, property) {
+      has(target2, property) {
         return hasProperty(property);
       },
-      get(target, property, receiver) {
+      get(target2, property, receiver) {
         switch (property) {
           case "prototype":
-            return target.prototype;
+            return target2.prototype;
           case "constructor":
-            return target.constructor;
+            return target2.constructor;
           case "hasOwnProperty":
             return hasProperty;
           case "toJSON":
@@ -1439,19 +1439,19 @@ function Runtime() {
             return ivar.get();
         }
       },
-      set(target, property, value, receiver) {
+      set(target2, property, value, receiver) {
         const ivar = findIvar(property);
         if (ivar === null)
           throw new Error("Unknown ivar");
         ivar.set(value);
         return true;
       },
-      ownKeys(target) {
+      ownKeys(target2) {
         if (cachedIvarNames === null)
           cachedIvarNames = Object.keys(ivars2);
         return cachedIvarNames;
       },
-      getOwnPropertyDescriptor(target, property) {
+      getOwnPropertyDescriptor(target2, property) {
         return {
           writable: true,
           configurable: true,
@@ -1468,7 +1468,7 @@ function Runtime() {
       if (impl === null) {
         const ivar = entry[0];
         const offset = api.ivar_getOffset(ivar).toInt32();
-        const address = instance.handle.add(offset);
+        const address2 = instance.handle.add(offset);
         const type = parseType(api.ivar_getTypeEncoding(ivar).readCString());
         const fromNative = type.fromNative || identityTransform;
         const toNative = type.toNative || identityTransform;
@@ -1484,10 +1484,10 @@ function Runtime() {
         }
         impl = {
           get() {
-            return fromNative.call(instance, read(address));
+            return fromNative.call(instance, read(address2));
           },
           set(value) {
-            write(address, toNative.call(instance, value));
+            write(address2, toNative.call(instance, value));
           }
         };
         entry[1] = impl;
@@ -1552,12 +1552,12 @@ function Runtime() {
   const BLOCK_IS_GLOBAL = 1 << 28;
   const BLOCK_HAS_STRET = 1 << 29;
   const BLOCK_HAS_SIGNATURE = 1 << 30;
-  function Block(target, options = defaultInvocationOptions) {
+  function Block(target2, options = defaultInvocationOptions) {
     this._options = options;
-    if (target instanceof NativePointer) {
-      const descriptor = target.add(blockOffsets.descriptor).readPointer();
-      this.handle = target;
-      const flags = target.add(blockOffsets.flags).readU32();
+    if (target2 instanceof NativePointer) {
+      const descriptor = target2.add(blockOffsets.descriptor).readPointer();
+      this.handle = target2;
+      const flags = target2.add(blockOffsets.flags).readU32();
       if ((flags & BLOCK_HAS_SIGNATURE) !== 0) {
         const signatureOffset = (flags & BLOCK_HAS_COPY_DISPOSE) !== 0 ? 2 : 0;
         this.types = descriptor.add(blockDescriptorOffsets.rest + signatureOffset * pointerSize).readPointer().readCString();
@@ -1566,7 +1566,7 @@ function Runtime() {
         this._signature = null;
       }
     } else {
-      this.declare(target);
+      this.declare(target2);
       const descriptor = Memory.alloc(blockDescriptorAllocSize + blockSize);
       const block2 = descriptor.add(blockDescriptorAllocSize);
       const typesStr = Memory.allocUtf8String(this.types);
@@ -1579,17 +1579,17 @@ function Runtime() {
       block2.add(blockOffsets.descriptor).writePointer(descriptor);
       this.handle = block2;
       this._storage = [descriptor, typesStr];
-      this.implementation = target.implementation;
+      this.implementation = target2.implementation;
     }
   }
   Object.defineProperties(Block.prototype, {
     implementation: {
       enumerable: true,
       get() {
-        const address = this.handle.add(blockOffsets.invoke).readPointer().strip();
+        const address2 = this.handle.add(blockOffsets.invoke).readPointer().strip();
         const signature2 = this._getSignature();
         return makeBlockInvocationWrapper(this, signature2, new NativeFunction(
-          address.sign(),
+          address2.sign(),
           signature2.retType.type,
           signature2.argTypes.map(function(arg) {
             return arg.type;
@@ -1654,9 +1654,9 @@ function Runtime() {
     );
     const proxyMethods = {
       "- dealloc": function() {
-        const target = this.data.target;
-        if ("- release" in target)
-          target.release();
+        const target2 = this.data.target;
+        if ("- release" in target2)
+          target2.release();
         unbind(this.self);
         this.super.dealloc();
         const callback = this.data.events.dealloc;
@@ -1695,12 +1695,12 @@ function Runtime() {
       protocols,
       methods: proxyMethods
     });
-    return function(target, data) {
-      target = target instanceof NativePointer ? new ObjCObject(target) : target;
+    return function(target2, data) {
+      target2 = target2 instanceof NativePointer ? new ObjCObject(target2) : target2;
       data = data || {};
       const instance = ProxyClass.alloc().autorelease();
       const boundData = getBoundData(instance);
-      boundData.target = "- retain" in target ? target.retain() : target;
+      boundData.target = "- retain" in target2 ? target2.retain() : target2;
       boundData.events = events;
       for (var key2 in data) {
         if (data.hasOwnProperty(key2)) {
@@ -1758,7 +1758,7 @@ function Runtime() {
         } else {
           method2 = value;
         }
-        const target = kind2 === "+" ? metaClassHandle : classHandle;
+        const target2 = kind2 === "+" ? metaClassHandle : classHandle;
         let types2 = method2.types;
         if (types2 === void 0) {
           types2 = unparseSignature(method2.retType, [kind2 === "+" ? "class" : "object", "selector"].concat(method2.argTypes));
@@ -1772,7 +1772,7 @@ function Runtime() {
           })
         );
         methodCallbacks.push(implementation3);
-        api.class_addMethod(target, selector(name2), implementation3, Memory.allocUtf8String(types2));
+        api.class_addMethod(target2, selector(name2), implementation3, Memory.allocUtf8String(types2));
       });
     } catch (e) {
       api.objc_disposeClassPair(classHandle);
@@ -2023,16 +2023,16 @@ function Runtime() {
           let cur = owner;
           do {
             if ("- forwardingTargetForSelector:" in cur) {
-              const target = cur.forwardingTargetForSelector_(sel);
-              if (target === null)
+              const target2 = cur.forwardingTargetForSelector_(sel);
+              if (target2 === null)
                 break;
-              if (target.$kind !== "instance")
+              if (target2.$kind !== "instance")
                 break;
-              const h = api.class_getInstanceMethod(target.$class.handle, sel);
+              const h = api.class_getInstanceMethod(target2.$class.handle, sel);
               if (!h.isNull())
                 handle = h;
               else
-                cur = target;
+                cur = target2;
             } else {
               break;
             }
@@ -2503,18 +2503,18 @@ function Runtime() {
   function arrayType(length, elementType) {
     return {
       type: "pointer",
-      read(address) {
+      read(address2) {
         const result = [];
         const elementSize = elementType.size;
         for (let index = 0; index !== length; index++) {
-          result.push(elementType.read(address.add(index * elementSize)));
+          result.push(elementType.read(address2.add(index * elementSize)));
         }
         return result;
       },
-      write(address, values) {
+      write(address2, values) {
         const elementSize = elementType.size;
         values.forEach((value, index) => {
-          elementType.write(address.add(index * elementSize), value);
+          elementType.write(address2.add(index * elementSize), value);
         });
       }
     };
@@ -2565,12 +2565,12 @@ function Runtime() {
     return {
       type: fieldTypes.map((t) => t.type),
       size: totalSize,
-      read(address) {
-        return fieldTypes.map((type, index) => type.read(address.add(fieldOffsets[index])));
+      read(address2) {
+        return fieldTypes.map((type, index) => type.read(address2.add(fieldOffsets[index])));
       },
-      write(address, values) {
+      write(address2, values) {
         values.forEach((value, index) => {
-          fieldTypes[index].write(address.add(fieldOffsets[index]), value);
+          fieldTypes[index].write(address2.add(fieldOffsets[index]), value);
         });
       },
       fromNative,
@@ -2641,9 +2641,9 @@ function Runtime() {
     "c": {
       type: "char",
       size: 1,
-      read: (address) => address.readS8(),
-      write: (address, value) => {
-        address.writeS8(value);
+      read: (address2) => address2.readS8(),
+      write: (address2, value) => {
+        address2.writeS8(value);
       },
       toNative(v) {
         if (typeof v === "boolean") {
@@ -2655,97 +2655,97 @@ function Runtime() {
     "i": {
       type: "int",
       size: 4,
-      read: (address) => address.readInt(),
-      write: (address, value) => {
-        address.writeInt(value);
+      read: (address2) => address2.readInt(),
+      write: (address2, value) => {
+        address2.writeInt(value);
       }
     },
     "s": {
       type: "int16",
       size: 2,
-      read: (address) => address.readS16(),
-      write: (address, value) => {
-        address.writeS16(value);
+      read: (address2) => address2.readS16(),
+      write: (address2, value) => {
+        address2.writeS16(value);
       }
     },
     "l": {
       type: "int32",
       size: 4,
-      read: (address) => address.readS32(),
-      write: (address, value) => {
-        address.writeS32(value);
+      read: (address2) => address2.readS32(),
+      write: (address2, value) => {
+        address2.writeS32(value);
       }
     },
     "q": {
       type: "int64",
       size: 8,
-      read: (address) => address.readS64(),
-      write: (address, value) => {
-        address.writeS64(value);
+      read: (address2) => address2.readS64(),
+      write: (address2, value) => {
+        address2.writeS64(value);
       }
     },
     "C": {
       type: "uchar",
       size: 1,
-      read: (address) => address.readU8(),
-      write: (address, value) => {
-        address.writeU8(value);
+      read: (address2) => address2.readU8(),
+      write: (address2, value) => {
+        address2.writeU8(value);
       }
     },
     "I": {
       type: "uint",
       size: 4,
-      read: (address) => address.readUInt(),
-      write: (address, value) => {
-        address.writeUInt(value);
+      read: (address2) => address2.readUInt(),
+      write: (address2, value) => {
+        address2.writeUInt(value);
       }
     },
     "S": {
       type: "uint16",
       size: 2,
-      read: (address) => address.readU16(),
-      write: (address, value) => {
-        address.writeU16(value);
+      read: (address2) => address2.readU16(),
+      write: (address2, value) => {
+        address2.writeU16(value);
       }
     },
     "L": {
       type: "uint" + longBits,
       size: longBits / 8,
-      read: (address) => address.readULong(),
-      write: (address, value) => {
-        address.writeULong(value);
+      read: (address2) => address2.readULong(),
+      write: (address2, value) => {
+        address2.writeULong(value);
       }
     },
     "Q": {
       type: "uint64",
       size: 8,
-      read: (address) => address.readU64(),
-      write: (address, value) => {
-        address.writeU64(value);
+      read: (address2) => address2.readU64(),
+      write: (address2, value) => {
+        address2.writeU64(value);
       }
     },
     "f": {
       type: "float",
       size: 4,
-      read: (address) => address.readFloat(),
-      write: (address, value) => {
-        address.writeFloat(value);
+      read: (address2) => address2.readFloat(),
+      write: (address2, value) => {
+        address2.writeFloat(value);
       }
     },
     "d": {
       type: "double",
       size: 8,
-      read: (address) => address.readDouble(),
-      write: (address, value) => {
-        address.writeDouble(value);
+      read: (address2) => address2.readDouble(),
+      write: (address2, value) => {
+        address2.writeDouble(value);
       }
     },
     "B": {
       type: "bool",
       size: 1,
-      read: (address) => address.readU8(),
-      write: (address, value) => {
-        address.writeU8(value);
+      read: (address2) => address2.readU8(),
+      write: (address2, value) => {
+        address2.writeU8(value);
       },
       fromNative(v) {
         return v ? true : false;
@@ -2761,9 +2761,9 @@ function Runtime() {
     "*": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       },
       fromNative(h) {
         return h.readCString();
@@ -2772,9 +2772,9 @@ function Runtime() {
     "@": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       },
       fromNative: fromNativeId,
       toNative: toNativeId
@@ -2782,9 +2782,9 @@ function Runtime() {
     "@?": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       },
       fromNative: fromNativeBlock,
       toNative: toNativeBlock
@@ -2792,26 +2792,26 @@ function Runtime() {
     "^@": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       },
       toNative: toNativeObjectArray
     },
     "^v": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       }
     },
     "#": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       },
       fromNative: fromNativeId,
       toNative: toNativeId
@@ -2819,17 +2819,17 @@ function Runtime() {
     ":": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       }
     },
     "?": {
       type: "pointer",
       size: pointerSize,
-      read: (address) => address.readPointer(),
-      write: (address, value) => {
-        address.writePointer(value);
+      read: (address2) => address2.readPointer(),
+      write: (address2, value) => {
+        address2.writePointer(value);
       }
     }
   };
@@ -2977,8 +2977,8 @@ function main(work) {
 function objectId(object) {
   if (object === null || object.handle.isNull())
     return null;
-  const address = object.handle.toString();
-  const known = state.byPointer.get(address);
+  const address2 = object.handle.toString();
+  const known = state.byPointer.get(address2);
   if (known) {
     own(known);
     return known;
@@ -2995,7 +2995,7 @@ function objectId(object) {
   const id = `${state.session}:object_${++state.serial}`;
   object.retain();
   state.objects.set(id, object);
-  state.byPointer.set(address, id);
+  state.byPointer.set(address2, id);
   own(id);
   return id;
 }
@@ -3046,8 +3046,8 @@ function methodFor(args) {
     throw new Error(`Method does not exist: ${args.class_name} ${key}`);
   return method2;
 }
-function imageFor(address) {
-  const stripped = Process.arch === "arm64" ? address.strip() : address;
+function imageFor(address2) {
+  const stripped = Process.arch === "arm64" ? address2.strip() : address2;
   const image = Process.findModuleByAddress(stripped);
   if (!image)
     return null;
@@ -3084,7 +3084,7 @@ function imageFor(address) {
     size: image.size,
     uuid,
     canonical_address: stripped.toString(),
-    pac_stripped: !stripped.equals(address),
+    pac_stripped: !stripped.equals(address2),
     architecture
   };
 }
@@ -3225,9 +3225,9 @@ function valueOf(value, args, depth = 0, seen = /* @__PURE__ */ new Set()) {
   if (value == null || typeof value === "boolean" || typeof value === "number")
     return value;
   if (typeof value === "string") {
-    const text2 = value.slice(0, Math.min(args.max_string_length || 128, 32768 - budget.characters));
-    budget.characters += text2.length;
-    return text2;
+    const text3 = value.slice(0, Math.min(args.max_string_length || 128, 32768 - budget.characters));
+    budget.characters += text3.length;
+    return text3;
   }
   if (typeof value === "bigint")
     return value.toString();
@@ -3239,9 +3239,9 @@ function valueOf(value, args, depth = 0, seen = /* @__PURE__ */ new Set()) {
     return null;
   const maximum = Math.min(args.max_string_length || 128, 32768 - budget.characters);
   if (isKind(value, "NSString")) {
-    const text2 = boundedString(value, maximum);
-    budget.characters += text2.length;
-    return text2;
+    const text3 = boundedString(value, maximum);
+    budget.characters += text3.length;
+    return text3;
   }
   if (isKind(value, "NSNumber"))
     return { number: String(value.stringValue()) };
@@ -3324,6 +3324,171 @@ function findInstances(args) {
     supported: true,
     warning: "Heap enumeration scans the allocator and may pause the target; cached pages and leased handles avoid rescanning"
   };
+}
+
+// agents/frida/accessibility.ts
+var present = (o) => !!o && !o.handle?.isNull();
+var has = (o, selector2) => present(o) && !!o.respondsToSelector_(frida_objc_bridge_default.selector(selector2));
+var isView = (o) => present(o) && !!o.isKindOfClass_(frida_objc_bridge_default.classes.UIView);
+var box = (r) => ({ x: Number(r[0][0]), y: Number(r[0][1]), width: Number(r[1][0]), height: Number(r[1][1]) });
+var isElement = (o) => !isView(o) && has(o, "accessibilityFrame");
+function frame(o) {
+  if (has(o, "accessibilityFrame")) {
+    const bounds = box(o.accessibilityFrame());
+    if (!isView(o) || bounds.width > 0 && bounds.height > 0)
+      return bounds;
+  }
+  return box(o.convertRect_toView_(o.bounds(), NULL));
+}
+function children(o, maximum) {
+  let result = [];
+  if (has(o, "accessibilityElements"))
+    result = array(o.accessibilityElements(), maximum);
+  if (!result.length && has(o, "accessibilityElementCount") && has(o, "accessibilityElementAtIndex:")) {
+    const count = Number(o.accessibilityElementCount());
+    if (Number.isSafeInteger(count) && count > 0 && count < 1e5) {
+      for (let i = 0; i < Math.min(count, maximum); i++) {
+        const child = o.accessibilityElementAtIndex_(i);
+        if (present(child))
+          result.push(child);
+      }
+    }
+  }
+  if (!result.length && isView(o))
+    result = array(o.subviews(), maximum);
+  return result;
+}
+function traits(o) {
+  return has(o, "accessibilityTraits") ? Number(o.accessibilityTraits()) : 0;
+}
+function describe(o, args, knownFrame) {
+  const fields = new Set(args.fields || ["view_id", "class_name", "screen_frame", "frame", "accessibility_identifier", "interactive", "accessibility_traits"]);
+  const result = { view_id: objectId(o), backend: "accessibility" };
+  const mask = ["interactive", "accessibility_traits", "accessibility_actions"].some((f2) => fields.has(f2)) ? traits(o) : 0;
+  const bounds = fields.has("frame") || fields.has("screen_frame") ? knownFrame || frame(o) : null;
+  if (fields.has("class_name"))
+    result.class_name = o.$className;
+  if (fields.has("frame"))
+    result.frame = bounds;
+  if (fields.has("screen_frame"))
+    result.screen_frame = bounds;
+  if (fields.has("accessibility_identifier"))
+    result.accessibility_identifier = has(o, "accessibilityIdentifier") ? nullableString(o.accessibilityIdentifier()) : null;
+  if (fields.has("interactive"))
+    result.interactive = !(mask & 256) && !!(mask & (1 | 2 | 32 | 1024 | 4096));
+  if (fields.has("accessibility_traits"))
+    result.accessibility_traits = String(mask);
+  if (fields.has("accessibility_actions"))
+    result.accessibility_actions = ["activate", ...mask & 4096 ? ["increment", "decrement"] : []];
+  if (args.include_text && (!args.fields || fields.has("text") || fields.has("accessibility_value"))) {
+    const secure = secureText(o);
+    if (!args.fields || fields.has("text"))
+      result.text = describeText(o);
+    if (!args.fields || fields.has("accessibility_value"))
+      result.accessibility_value = secure ? "[REDACTED]" : has(o, "accessibilityValue") ? nullableString(o.accessibilityValue(), 128) : null;
+  }
+  return result;
+}
+function ancestry(o) {
+  let hidden = false, alpha = 1, current = isView(o) ? o.superview() : null;
+  for (let i = 0; i < 128 && present(current); i++, current = current.superview()) {
+    hidden ||= !!current.isHidden();
+    alpha *= Number(current.alpha());
+  }
+  return { hidden, alpha };
+}
+function snapshot(args, roots, parent = null, baseDepth = 0, skipRoots = false) {
+  const started = Date.now();
+  const maximum = args.max_nodes ?? 1e3, depthLimit = args.depth ?? 8;
+  const queue = roots.map((o) => ({ o, depth: baseDepth, parent, ...ancestry(o) }));
+  const seen = /* @__PURE__ */ new Set(), views = [];
+  let index = 0, truncated = false, objectLimit = false;
+  for (; index < queue.length && seen.size < maximum; index++) {
+    const { o, depth, parent: parent2, hidden, alpha } = queue[index];
+    if (!present(o) || seen.has(o.handle.toString()))
+      continue;
+    seen.add(o.handle.toString());
+    const view = isView(o), nextAlpha = alpha * (view ? Number(o.alpha()) : 1);
+    const nextHidden = hidden || view && !!o.isHidden();
+    if ((args.visible_only ?? true) && (nextHidden || nextAlpha <= 0.01))
+      continue;
+    const identifier = has(o, "accessibilityIdentifier") ? nullableString(o.accessibilityIdentifier()) : null;
+    const isAccessible = has(o, "isAccessibilityElement") && !!o.isAccessibilityElement();
+    const matches = (!args.class_name || o.$className === args.class_name) && (!args.accessibility_identifier || identifier === args.accessibility_identifier) && (args.text == null || String(describeText(o)).toLowerCase().includes(String(args.text).toLowerCase()));
+    let selectedParent = parent2;
+    if ((!skipRoots || depth > baseDepth) && matches && (!(args.controls_only ?? true) || isAccessible || isElement(o))) {
+      const bounds = frame(o), screen = box(frida_objc_bridge_default.classes.UIScreen.mainScreen().bounds());
+      const visible = bounds.width > 0 && bounds.height > 0 && bounds.x < screen.x + screen.width && bounds.y < screen.y + screen.height && bounds.x + bounds.width > screen.x && bounds.y + bounds.height > screen.y;
+      if (!(args.visible_only ?? true) || visible) {
+        try {
+          const row = describe(o, args, bounds);
+          views.push({ ...row, parent_id: parent2, depth });
+          selectedParent = row.view_id;
+        } catch (error) {
+          if (!(error instanceof ObjectLimitError))
+            throw error;
+          objectLimit = true;
+          break;
+        }
+      }
+    }
+    if (has(o, "accessibilityElementsHidden") && o.accessibilityElementsHidden())
+      continue;
+    const nested = children(o, maximum + 1);
+    if (depth >= depthLimit) {
+      if (nested.length)
+        truncated = true;
+      continue;
+    }
+    for (const child of nested) {
+      if (queue.length >= maximum * 2) {
+        truncated = true;
+        break;
+      }
+      queue.push({ o: child, depth: depth + 1, parent: selectedParent, hidden: nextHidden, alpha: nextAlpha });
+    }
+  }
+  return {
+    views,
+    backend: "accessibility",
+    total_visited: seen.size,
+    truncated: truncated || index < queue.length,
+    object_limit_reached: objectLimit,
+    captured_at: new Date(started).toISOString(),
+    collection_ms: Date.now() - started,
+    coordinate_space: "screen UIKit points",
+    session_scoped: true,
+    observed: true
+  };
+}
+function describeText(o) {
+  return secureText(o) ? "[REDACTED]" : has(o, "accessibilityLabel") ? nullableString(o.accessibilityLabel()) || "" : "";
+}
+function secureText(o) {
+  const identifier = has(o, "accessibilityIdentifier") ? nullableString(o.accessibilityIdentifier()) || "" : "";
+  return /password|passwd|secret|token|credential|private.?key/i.test(identifier) || has(o, "isSecureTextEntry") && !!o.isSecureTextEntry();
+}
+function act(o, operation, direction) {
+  const bounds = frame(o);
+  if (bounds.width <= 0 || bounds.height <= 0 || traits(o) & 256)
+    throw new Error("Accessibility target is unavailable or disabled");
+  if (operation === "activate") {
+    if (!has(o, "accessibilityActivate") || !o.accessibilityActivate())
+      throw new Error("Accessibility activation was not handled; use the touch backend if needed");
+  } else if (operation === "increment" || operation === "decrement") {
+    if (!(traits(o) & 4096))
+      throw new Error("Accessibility target is not adjustable");
+    o[operation === "increment" ? "accessibilityIncrement" : "accessibilityDecrement"]();
+  } else if (operation === "escape") {
+    if (!has(o, "accessibilityPerformEscape") || !o.accessibilityPerformEscape())
+      throw new Error("Accessibility escape was not handled");
+  } else if (operation === "scroll") {
+    const directions = { right: 1, left: 2, up: 3, down: 4, next: 5, previous: 6 };
+    if (!has(o, "accessibilityScroll:") || !o.accessibilityScroll_(directions[direction || "down"]))
+      throw new Error("Accessibility scroll was not handled");
+  } else
+    throw new Error("Unsupported accessibility operation");
+  return { action: operation, method: "accessibility_" + operation, view_id: objectId(o), performed: true };
 }
 
 // agents/frida/ui_inspector.ts
@@ -3411,10 +3576,10 @@ function targets(view) {
     return [];
   const result = [];
   const events = [1, 2, 4, 8, 16, 32, 64, 128, 256, 4096, 8192, 65536, 131072, 262144, 524288];
-  for (const target of array(view.allTargets().allObjects(), 32)) {
+  for (const target2 of array(view.allTargets().allObjects(), 32)) {
     for (const event of events) {
-      for (const selector2 of array(view.actionsForTarget_forControlEvent_(target, event), 32)) {
-        result.push({ target_id: objectId(target), target_class: target.$className, selector: String(selector2), control_event: event, observed: true });
+      for (const selector2 of array(view.actionsForTarget_forControlEvent_(target2, event), 32)) {
+        result.push({ target_id: objectId(target2), target_class: target2.$className, selector: String(selector2), control_event: event, observed: true });
         if (result.length >= 128)
           return result;
       }
@@ -3425,7 +3590,7 @@ function targets(view) {
 function screenFrame(view) {
   return rect(view.convertRect_toView_(view.bounds(), view.window()));
 }
-function ancestry(view) {
+function ancestry2(view) {
   let current = view.superview(), hidden = false, alpha = 1, interaction = true;
   for (let i = 0; i < 128 && current && !current.handle.isNull(); i++) {
     hidden ||= !!current.isHidden();
@@ -3448,7 +3613,7 @@ function interactive(view) {
 }
 var summaryFields = ["view_id", "class_name", "frame", "screen_frame", "parent_id", "depth", "interactive", "accessibility_identifier"];
 var detailFields = [...summaryFields, "bounds", "is_button", "hidden", "alpha", "effective_alpha", "visible", "user_interaction_enabled", "controller", "observed"];
-function describe(view, includeText, detailed = false, fields, owners2 = /* @__PURE__ */ new Map(), visibility) {
+function describe2(view, includeText, detailed = false, fields, owners2 = /* @__PURE__ */ new Map(), visibility) {
   const selected = new Set(fields || (detailed ? [...detailFields, "superview_id", "subviews", "translates_autoresizing_mask", "targets"] : summaryFields));
   const result = { view_id: objectId(view), class_name: view.$className };
   if (selected.has("frame"))
@@ -3464,15 +3629,15 @@ function describe(view, includeText, detailed = false, fields, owners2 = /* @__P
   if (selected.has("alpha"))
     result.alpha = Number(view.alpha());
   if (selected.has("effective_alpha"))
-    result.effective_alpha = visibility?.alpha ?? ancestry(view).alpha * Number(view.alpha());
+    result.effective_alpha = visibility?.alpha ?? ancestry2(view).alpha * Number(view.alpha());
   if (selected.has("visible")) {
-    const ancestors = visibility || ancestry(view);
+    const ancestors = visibility || ancestry2(view);
     result.visible = !(ancestors.hidden || view.isHidden()) && Number(view.alpha()) * (visibility ? 1 : ancestors.alpha) > 0.01 && (visibility ? visibility.visible : true);
   }
   if (selected.has("user_interaction_enabled"))
     result.user_interaction_enabled = !!view.isUserInteractionEnabled();
   if (selected.has("interactive"))
-    result.interactive = visibility?.interactive ?? (interactive(view) && ancestry(view).interaction);
+    result.interactive = visibility?.interactive ?? (interactive(view) && ancestry2(view).interaction);
   if (selected.has("accessibility_identifier"))
     result.accessibility_identifier = nullableString(view.accessibilityIdentifier());
   if (selected.has("controller"))
@@ -3491,24 +3656,26 @@ function describe(view, includeText, detailed = false, fields, owners2 = /* @__P
     result.targets = targets(view);
   return result;
 }
-function snapshot(args, windowInfo = windows()) {
+function snapshot2(args, windowInfo = windows()) {
   const started = Date.now();
-  const roots = args.root_view_id ? [viewFor(args.root_view_id)] : windowInfo.windows.map((w) => objectFor(w.view_id));
-  const queue = roots.map((view) => ({ view, depth: 0, parent_id: null, ancestors: ancestry(view) }));
+  const roots = args.root_view_id ? [args.backend === "accessibility" ? objectFor(args.root_view_id) : viewFor(args.root_view_id)] : windowInfo.windows.map((w) => objectFor(w.view_id));
+  if (args.backend === "accessibility")
+    return snapshot(args, roots);
+  const queue = roots.map((view) => ({ view, depth: 0, parent_id: null, ancestors: ancestry2(view) }));
   const nodes = [], visited = /* @__PURE__ */ new Set(), owners2 = /* @__PURE__ */ new Map();
   const depthLimit = args.depth ?? 8, maximum = args.max_nodes ?? 1e3;
   const detail = args.format === "detail", visibleOnly = args.visible_only ?? true, controlsOnly = args.controls_only ?? true;
   const fields = args.fields || [...detail ? detailFields : summaryFields, ...args.include_text ? ["text"] : []];
-  let truncated = false, index = 0, objectLimit = false;
-  for (; index < queue.length && visited.size < maximum; index++) {
+  let truncated = false, index = 0, objectLimit = false, accessibleVisited = 0;
+  for (; index < queue.length && visited.size + accessibleVisited < maximum; index++) {
     const { view, depth, parent_id, ancestors } = queue[index];
     if (visited.has(view.handle.toString()))
       continue;
     visited.add(view.handle.toString());
     const hidden = ancestors.hidden || !!view.isHidden(), alpha = ancestors.alpha * Number(view.alpha());
-    const box = screenFrame(view), window = view.window();
+    const box2 = screenFrame(view), window = view.window();
     const windowBox = window && !window.handle.isNull() ? rect(window.bounds()) : null;
-    const visible = !hidden && alpha > 0.01 && box.width > 0 && box.height > 0 && !!windowBox && box.x < windowBox.x + windowBox.width && box.y < windowBox.y + windowBox.height && box.x + box.width > windowBox.x && box.y + box.height > windowBox.y;
+    const visible = !hidden && alpha > 0.01 && box2.width > 0 && box2.height > 0 && !!windowBox && box2.x < windowBox.x + windowBox.width && box2.y < windowBox.y + windowBox.height && box2.x + box2.width > windowBox.x && box2.y + box2.height > windowBox.y;
     if (visibleOnly && (hidden || alpha <= 0.01))
       continue;
     const matches = (!args.class_name || view.$className === args.class_name) && (!args.accessibility_identifier || nullableString(view.accessibilityIdentifier()) === args.accessibility_identifier) && (args.hidden == null || !!view.isHidden() === args.hidden) && (args.user_interaction_enabled == null || !!view.isUserInteractionEnabled() === args.user_interaction_enabled) && (args.text == null || String(text(view) || "").toLowerCase().includes(String(args.text).toLowerCase()));
@@ -3517,7 +3684,7 @@ function snapshot(args, windowInfo = windows()) {
     const isContent = !controlsOnly || isInteractive || matches && (!visibleOnly || visible) && (isKind2(view, "UILabel") || isKind2(view, "UITextView") || !!view.isAccessibilityElement());
     if (matches && (!visibleOnly || visible) && isContent) {
       try {
-        const description = describe(view, !!args.include_text, false, fields, owners2, { hidden, alpha, interaction: ancestors.interaction, interactive: isInteractive, visible });
+        const description = describe2(view, !!args.include_text, false, fields, owners2, { hidden, alpha, interaction: ancestors.interaction, interactive: isInteractive, visible });
         if (fields.includes("parent_id"))
           description.parent_id = parent_id;
         if (fields.includes("depth"))
@@ -3531,9 +3698,24 @@ function snapshot(args, windowInfo = windows()) {
         break;
       }
     }
-    const children = array(view.subviews(), maximum + 1);
+    if (args.backend !== "uikit" && /SwiftUI|HostingView/.test(view.$className) && depth < depthLimit && visited.size + accessibleVisited < maximum) {
+      const accessible = snapshot({ ...args, max_nodes: maximum - visited.size - accessibleVisited }, [view], selectedParent, depth, true);
+      accessibleVisited += accessible.total_visited;
+      objectLimit ||= accessible.object_limit_reached;
+      truncated ||= accessible.truncated;
+      if (accessible.views.length) {
+        nodes.push(...accessible.views);
+        truncated ||= accessible.truncated;
+        if (nodes.length >= maximum) {
+          truncated = true;
+          break;
+        }
+        continue;
+      }
+    }
+    const children2 = array(view.subviews(), maximum + 1);
     if (depth < depthLimit)
-      for (const child of children) {
+      for (const child of children2) {
         if (queue.length >= maximum * 2) {
           truncated = true;
           break;
@@ -3545,24 +3727,25 @@ function snapshot(args, windowInfo = windows()) {
           ancestors: { hidden, alpha, interaction: ancestors.interaction && !!view.isUserInteractionEnabled() }
         });
       }
-    else if (children.length)
+    else if (children2.length)
       truncated = true;
   }
   return {
     ...detail ? windowInfo : {},
     views: nodes,
-    total_visited: visited.size,
+    total_visited: visited.size + accessibleVisited,
     captured_at: new Date(started).toISOString(),
     collection_ms: Date.now() - started,
     truncated: truncated || index < queue.length,
     object_limit_reached: objectLimit,
-    coordinate_space: "screen_frame is in window UIKit points; frame is in superview points",
+    coordinate_space: "UIKit screen_frame: window points; accessibility screen_frame: screen points; UIKit frame: superview points",
     session_scoped: true,
     observed: true
   };
 }
 function inspectView(args) {
-  return describe(viewFor(args.view_id), !!args.include_text, true, args.fields);
+  const object = objectFor(args.view_id);
+  return isElement(object) ? describe(object, args) : describe2(viewFor(args.view_id), !!args.include_text, true, args.fields);
 }
 function constraints(args) {
   const view = viewFor(args.view_id);
@@ -3603,12 +3786,12 @@ function hitTest(args) {
   return {
     coordinate_space: "window bounds in UIKit points",
     window_id: selected.view_id,
-    hit: hit == null ? null : describe(hit, !!args.include_text, true),
+    hit: hit == null ? null : describe2(hit, !!args.include_text, true),
     observed: true
   };
 }
 function findViews(args) {
-  return snapshot({
+  return snapshot2({
     ...args,
     format: args.format || "detail",
     controls_only: args.controls_only ?? false,
@@ -3657,7 +3840,7 @@ function screenshot(args, available = windows().windows) {
 function capture(args) {
   const result = {}, windowInfo = windows();
   if (args.mode === "summary" || args.mode === "both")
-    result.summary = snapshot(args, windowInfo);
+    result.summary = snapshot2(args, windowInfo);
   if (args.mode === "screenshot" || args.mode === "both")
     result.screenshot = screenshot(args, windowInfo.windows);
   return result;
@@ -3707,7 +3890,7 @@ function hookMethod(args) {
       if (args.capture_arguments)
         event.arguments = method2.argumentTypes.slice(2, 10).map((type, i) => scalar(callArgs2[i + 2], type));
       if (args.backtrace)
-        event.backtrace = Thread.backtrace(this.context, Backtracer.ACCURATE).slice(0, 32).map((address) => ({ address: address.toString(), symbol: DebugSymbol.fromAddress(address).toString(), image: imageFor(address) }));
+        event.backtrace = Thread.backtrace(this.context, Backtracer.ACCURATE).slice(0, 32).map((address2) => ({ address: address2.toString(), symbol: DebugSymbol.fromAddress(address2).toString(), image: imageFor(address2) }));
       hook2.emitted++;
       send(event);
     },
@@ -3761,7 +3944,7 @@ function dispose2() {
 function kind(value, name) {
   return !!value && !value.handle.isNull() && !!frida_objc_bridge_default.classes[name] && !!value.isKindOfClass_(frida_objc_bridge_default.classes[name]);
 }
-function present(value) {
+function present2(value) {
   return !!value && !value.handle.isNull();
 }
 function windowFor(args) {
@@ -3772,13 +3955,19 @@ function windowFor(args) {
   return objectFor(item.view_id);
 }
 function actionable(view, interaction = true) {
-  if (!kind(view, "UIView") || !present(view.window()))
+  if (isElement(view)) {
+    const frame2 = frame(view);
+    if (frame2.width <= 0 || frame2.height <= 0)
+      throw new Error("Accessibility target has no visible frame");
+    return;
+  }
+  if (!kind(view, "UIView") || !present2(view.window()))
     throw new Error("Target is not an attached UIView");
-  const box = view.convertRect_toView_(view.bounds(), view.window()), bounds = view.window().bounds();
-  if (Number(box[1][0]) <= 0 || Number(box[1][1]) <= 0 || Number(box[0][0]) + Number(box[1][0]) <= Number(bounds[0][0]) || Number(box[0][1]) + Number(box[1][1]) <= Number(bounds[0][1]) || Number(box[0][0]) >= Number(bounds[0][0]) + Number(bounds[1][0]) || Number(box[0][1]) >= Number(bounds[0][1]) + Number(bounds[1][1]))
+  const box2 = view.convertRect_toView_(view.bounds(), view.window()), bounds = view.window().bounds();
+  if (Number(box2[1][0]) <= 0 || Number(box2[1][1]) <= 0 || Number(box2[0][0]) + Number(box2[1][0]) <= Number(bounds[0][0]) || Number(box2[0][1]) + Number(box2[1][1]) <= Number(bounds[0][1]) || Number(box2[0][0]) >= Number(bounds[0][0]) + Number(bounds[1][0]) || Number(box2[0][1]) >= Number(bounds[0][1]) + Number(bounds[1][1]))
     throw new Error("Target is outside the window bounds");
   let current = view, alpha = 1;
-  for (let i = 0; i < 128 && present(current); i++, current = current.superview()) {
+  for (let i = 0; i < 128 && present2(current); i++, current = current.superview()) {
     alpha *= Number(current.alpha());
     if (current.isHidden() || alpha <= 0.01 || interaction && !current.isUserInteractionEnabled())
       throw new Error("Target or an ancestor is hidden, transparent or disabled");
@@ -3786,9 +3975,9 @@ function actionable(view, interaction = true) {
   if (interaction && kind(view, "UIControl") && !view.isEnabled())
     throw new Error("Control is disabled");
 }
-function resolve(target, allowMissing = false, interaction = true) {
-  if (target.view_id) {
-    const view2 = objectFor(target.view_id);
+function resolve(target2, allowMissing = false, interaction = true) {
+  if (target2.view_id) {
+    const view2 = objectFor(target2.view_id);
     try {
       actionable(view2, interaction);
     } catch (error) {
@@ -3798,9 +3987,9 @@ function resolve(target, allowMissing = false, interaction = true) {
     }
     return view2;
   }
-  if (target.x != null) {
-    const view2 = windowFor(target).hitTest_withEvent_([target.x, target.y], NULL);
-    if (!present(view2)) {
+  if (target2.x != null) {
+    const view2 = windowFor(target2).hitTest_withEvent_([target2.x, target2.y], NULL);
+    if (!present2(view2)) {
       if (allowMissing)
         return null;
       throw new Error("No view at the requested window point");
@@ -3808,19 +3997,19 @@ function resolve(target, allowMissing = false, interaction = true) {
     actionable(view2, interaction);
     return view2;
   }
-  const found = snapshot({
-    ...target,
+  const found = snapshot2({
+    ...target2,
     format: "summary",
     fields: ["view_id"],
     controls_only: false,
     visible_only: true,
     include_text: false,
-    max_nodes: target.max_nodes || 1e3,
+    max_nodes: target2.max_nodes || 1e3,
     depth: 30
   }).views;
   if (!found.length && allowMissing)
     return null;
-  const index = target.match_index;
+  const index = target2.match_index;
   if (!found.length)
     throw new Error("No visible view matches the target");
   if (index == null && found.length !== 1)
@@ -3831,6 +4020,16 @@ function resolve(target, allowMissing = false, interaction = true) {
   actionable(view, interaction);
   return view;
 }
+function touchTarget(args) {
+  const view = resolve({ ...args.target, backend: args.backend }, false, false);
+  const bounds = frame(view);
+  return {
+    point: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+    frame: bounds,
+    view_id: objectId(view),
+    coordinate_space: "screen UIKit points"
+  };
+}
 function step(args) {
   if (state.disposing)
     throw new Error("Process session is disposing; remaining actions were cancelled");
@@ -3838,10 +4037,10 @@ function step(args) {
   if (action === "back") {
     const window = windowFor(args), seen = /* @__PURE__ */ new Set();
     let current = window.rootViewController();
-    while (present(current) && seen.size < 64 && !seen.has(current.handle.toString())) {
+    while (present2(current) && seen.size < 64 && !seen.has(current.handle.toString())) {
       seen.add(current.handle.toString());
       const next = current.presentedViewController();
-      if (present(next)) {
+      if (present2(next)) {
         current = next;
         continue;
       }
@@ -3855,31 +4054,40 @@ function step(args) {
       }
       break;
     }
-    if (!present(current))
+    if (!present2(current))
       throw new Error("No visible controller is available");
     const navigation = current.navigationController();
-    if (args.mode !== "dismiss" && present(navigation) && Number(navigation.viewControllers().count()) > 1) {
+    if (args.mode !== "dismiss" && present2(navigation) && Number(navigation.viewControllers().count()) > 1) {
       navigation.popViewControllerAnimated_(!!args.animated);
       window.layoutIfNeeded();
       return { action, method: "navigation_pop", performed: true };
     }
-    const modal = present(current.presentingViewController()) ? current : navigation;
-    if (args.mode !== "navigation" && present(modal) && present(modal.presentingViewController())) {
+    const modal = present2(current.presentingViewController()) ? current : navigation;
+    if (args.mode !== "navigation" && present2(modal) && present2(modal.presentingViewController())) {
       modal.dismissViewControllerAnimated_completion_(!!args.animated, NULL);
       window.layoutIfNeeded();
       return { action, method: "dismiss", performed: true };
     }
     throw new Error("No navigation or modal transition can go back from this controller");
   }
-  const target = args.target || {};
-  let view = resolve(target, action === "wait_for", action !== "wait_for" && action !== "assert" && action !== "tap");
+  const target2 = { ...args.target, backend: args.backend };
+  let view = resolve(target2, action === "wait_for", action !== "wait_for" && action !== "assert" && action !== "tap");
   if (!view)
     return { action, matched: false };
   const viewId = objectId(view);
   if (action === "assert" || action === "wait_for")
     return { action, matched: true, view_id: viewId };
+  if (action === "accessibility")
+    return act(view, args.operation, args.direction);
+  if (isElement(view)) {
+    if (action === "tap")
+      return act(view, "activate");
+    if (action === "scroll")
+      return act(view, "scroll", (args.dy || args.pages || 0) >= 0 ? "down" : "up");
+    throw new Error("This accessibility element requires a semantic action or the touch backend");
+  }
   if (action === "tap") {
-    for (let i = 0; i < 32 && present(view); i++, view = view.superview()) {
+    for (let i = 0; i < 32 && present2(view); i++, view = view.superview()) {
       if (kind(view, "UIWindow"))
         break;
       actionable(view, false);
@@ -3917,9 +4125,9 @@ function step(args) {
     return { action, view_id: viewId, characters: args.text.length, performed: true };
   }
   if (action === "scroll") {
-    while (present(view) && !kind(view, "UIScrollView"))
+    while (present2(view) && !kind(view, "UIScrollView"))
       view = view.superview();
-    if (!present(view))
+    if (!present2(view))
       throw new Error("Target has no UIScrollView ancestor");
     const offset = view.contentOffset(), size = view.contentSize(), bounds = view.bounds()[1];
     const inset = view.adjustedContentInset();
@@ -3956,7 +4164,7 @@ async function run(args) {
       try {
         let result;
         do {
-          result = await main(() => withObjectLease(lease, () => step(item)));
+          result = await main(() => withObjectLease(lease, () => step({ ...item, backend: args.backend })));
           if (item.action !== "wait_for" || result.matched || Date.now() - begin >= item.timeout_ms)
             break;
           await new Promise((resolve2) => setTimeout(resolve2, Math.min(item.poll_ms, item.timeout_ms - (Date.now() - begin))));
@@ -3973,7 +4181,7 @@ async function run(args) {
         break;
       }
     }
-    const capture2 = args.after_capture !== "none" && !state.disposing ? await main(() => withObjectLease(lease, () => capture({ ...args, mode: args.after_capture }))) : {};
+    const capture2 = !results.some((s) => s.error) && args.after_capture !== "none" && !state.disposing ? await main(() => withObjectLease(lease, () => capture({ ...args, mode: args.after_capture }))) : {};
     return {
       steps: results,
       completed: results.length === args.steps.length && !results.some((s) => s.error),
@@ -4012,8 +4220,8 @@ function cString(pointer, bytes = maxLength * 4) {
 function nsString(object) {
   return String(object.substringToIndex_(Math.min(Number(object.length()), maxLength + 1)));
 }
-function append(source, level, text2, kind2) {
-  const message = text2.slice(0, maxLength);
+function append(source, level, text3, kind2) {
+  const message = text3.slice(0, maxLength);
   if (!message)
     return;
   const entry = {
@@ -4023,7 +4231,7 @@ function append(source, level, text2, kind2) {
     level,
     message,
     message_kind: kind2,
-    truncated: text2.length > maxLength
+    truncated: text3.length > maxLength
   };
   entries.push(entry);
   characters += message.length;
@@ -4033,13 +4241,13 @@ function append(source, level, text2, kind2) {
   }
 }
 function hook(name, source, read) {
-  const address = Module.findGlobalExportByName(name);
-  if (!address) {
+  const address2 = Module.findGlobalExportByName(name);
+  if (!address2) {
     unavailable.push(name);
     return;
   }
   try {
-    listeners.push(Interceptor.attach(address, { onEnter(args) {
+    listeners.push(Interceptor.attach(address2, { onEnter(args) {
       if (reading.has(this.threadId))
         return;
       reading.add(this.threadId);
@@ -4152,15 +4360,15 @@ function inspect(args) {
       result.name = thread.name;
     if (args.mode === "backtrace") {
       try {
-        result.frames = Thread.backtrace(thread.context, Backtracer.ACCURATE).slice(0, args.max_frames).map((address, index) => {
-          const frame = { index, address: address.toString() };
+        result.frames = Thread.backtrace(thread.context, Backtracer.ACCURATE).slice(0, args.max_frames).map((address2, index) => {
+          const frame2 = { index, address: address2.toString() };
           if (args.symbols) {
-            frame.symbol = DebugSymbol.fromAddress(address).toString();
-            const image = Process.findModuleByAddress(address.strip());
+            frame2.symbol = DebugSymbol.fromAddress(address2).toString();
+            const image = Process.findModuleByAddress(address2.strip());
             if (image)
-              frame.image = image.name;
+              frame2.image = image.name;
           }
-          return frame;
+          return frame2;
         });
       } catch (_) {
         result.unavailable = "Thread context could not be unwound";
@@ -4489,8 +4697,8 @@ function dump(args) {
     };
     var allocStr = allocStr2, putStr = putStr2, getByteArr = getByteArr2, getU8 = getU82, putU8 = putU82, getU16 = getU162, putU16 = putU162, getU32 = getU322, putU32 = putU322, getU64 = getU642, putU64 = putU642, getPt = getPt2, putPt = putPt2, malloc = malloc2, getExportFunction = getExportFunction2, read = read2, readExact = readExact2, writeAll = writeAll2, lseek = lseek2, getDocumentDir = getDocumentDir2, open = open2, getAllAppModules = getAllAppModules2, pad = pad2, swap32 = swap322, dumpModule = dumpModule2;
     const bundle = String(frida_objc_bridge_default.classes.NSBundle.mainBundle().bundlePath());
-    const target = Process.enumerateModules().find((m2) => m2.path === args.module_path);
-    if (!target || !target.path.startsWith(bundle + "/") || !/^[A-Za-z0-9_-]+$/.test(args.dump_id))
+    const target2 = Process.enumerateModules().find((m2) => m2.path === args.module_path);
+    if (!target2 || !target2.path.startsWith(bundle + "/") || !/^[A-Za-z0-9_-]+$/.test(args.dump_id))
       throw new Error("Select a loaded module inside the verified app bundle");
     args = { ...args, bundle_path: bundle };
     var originalCryptid = null;
@@ -4524,11 +4732,197 @@ function dump(args) {
     var LC_SEGMENT_64 = 25;
     var LC_ENCRYPTION_INFO = 33;
     var LC_ENCRYPTION_INFO_64 = 44;
-    const remote = dumpModule2(target.path, args.dump_id);
-    return { original_cryptid: originalCryptid, remote_path: remote, module_path: target.path, image: imageFor(target.base), backend: "frida-ios-dump", upstream_commit: "8395374b3fc254c89e6b6ef67bb8247ac6d1c342" };
+    const remote = dumpModule2(target2.path, args.dump_id);
+    return { original_cryptid: originalCryptid, remote_path: remote, module_path: target2.path, image: imageFor(target2.base), backend: "frida-ios-dump", upstream_commit: "8395374b3fc254c89e6b6ef67bb8247ac6d1c342" };
   } finally {
     pool.release();
   }
+}
+
+// agents/frida/native.ts
+var hooks2 = /* @__PURE__ */ new Map();
+var exportsCache = /* @__PURE__ */ new Map();
+var serial2 = 0;
+function address(value, permission = "r") {
+  const p = ptr(value), range = Process.findRangeByAddress(p.strip());
+  const cloakedData = !range && permission !== "x" && !p.isNull() && p.readVolatile(1) !== null;
+  if (p.isNull() || !(range?.protection.includes(permission) || cloakedData))
+    throw new Error(`Native address ${p} requires ${permission}; observed ${range?.protection || "unmapped"}`);
+  return p;
+}
+function target(args) {
+  if (args.address)
+    return address(args.address, "x");
+  const module = Process.getModuleByName(args.module);
+  const p = module.getExportByName(args.symbol);
+  return address(p.toString(), "x");
+}
+function text2(p, length) {
+  return p.isNull() ? null : p.readUtf8String(length);
+}
+function scalar2(p, type, length = 128) {
+  if (type === "utf8")
+    return text2(p, length);
+  if (type === "pointer")
+    return p.readPointer().toString();
+  const readers = {
+    bool: () => !!p.readU8(),
+    int8: () => p.readS8(),
+    uint8: () => p.readU8(),
+    int16: () => p.readS16(),
+    uint16: () => p.readU16(),
+    int: () => p.readS32(),
+    uint: () => p.readU32(),
+    int32: () => p.readS32(),
+    uint32: () => p.readU32(),
+    int64: () => p.readS64().toString(),
+    uint64: () => p.readU64().toString(),
+    long: () => p.readS64().toString(),
+    ulong: () => p.readU64().toString(),
+    size_t: () => p.readU64().toString(),
+    ssize_t: () => p.readS64().toString(),
+    float: () => p.readFloat(),
+    double: () => p.readDouble()
+  };
+  if (!readers[type])
+    throw new Error("Unsupported native field type");
+  return readers[type]();
+}
+function argument(value, type, allocated) {
+  if (value && typeof value === "object") {
+    if (type !== "pointer")
+      throw new Error("Address/UTF-8 arguments require ABI type pointer");
+    if (value.utf8 != null) {
+      const p = Memory.allocUtf8String(value.utf8);
+      allocated.push(p);
+      return p;
+    }
+    return ptr(value.address);
+  }
+  if (type === "pointer")
+    return ptr(value);
+  return value;
+}
+function returned(value) {
+  if (value == null)
+    return null;
+  return typeof value === "object" ? value.toString() : value;
+}
+function registerValue(p, type) {
+  if (type === "void")
+    return null;
+  if (["int", "int32"].includes(type))
+    return p.toInt32();
+  if (["uint", "uint32"].includes(type))
+    return p.toUInt32();
+  if (type === "bool")
+    return !!p.toUInt32();
+  if (type === "int8")
+    return p.toInt32() << 24 >> 24;
+  if (type === "int16")
+    return p.toInt32() << 16 >> 16;
+  if (type === "uint8")
+    return p.toUInt32() & 255;
+  if (type === "uint16")
+    return p.toUInt32() & 65535;
+  if (["int64", "long", "ssize_t"].includes(type))
+    return new Int64(p.toString()).toString();
+  if (["uint64", "ulong", "size_t"].includes(type))
+    return new UInt64(p.toString()).toString();
+  return p.toString();
+}
+function run3(args) {
+  if (args.action === "symbols") {
+    const module = Process.getModuleByName(args.module), key = module.base.toString();
+    let entries2;
+    if (args.include_private)
+      entries2 = module.enumerateSymbols();
+    else {
+      entries2 = exportsCache.get(key) || module.enumerateExports();
+      if (entries2.length <= 5e4 && !exportsCache.has(key)) {
+        if (exportsCache.size >= 4)
+          exportsCache.delete(exportsCache.keys().next().value);
+        exportsCache.set(key, entries2);
+      }
+    }
+    const matches = entries2.filter((s) => s.type === "function" && (!args.query || s.name.toLowerCase().includes(args.query.toLowerCase())));
+    return {
+      items: matches.slice(args.offset, args.offset + args.limit).map((s) => ({ name: s.name, address: s.address.toString(), module: module.name })),
+      total: matches.length,
+      next_offset: args.offset + args.limit < matches.length ? args.offset + args.limit : null
+    };
+  }
+  if (args.action === "inspect") {
+    const base = address(args.address), values = {};
+    for (const field of args.fields) {
+      try {
+        values[field.name] = scalar2(base.add(field.offset), field.type, field.max_length);
+      } catch (error) {
+        values[field.name] = { unavailable: String(error).slice(0, 256) };
+      }
+    }
+    return { address: base.toString(), values, observed: true };
+  }
+  if (args.action === "read") {
+    const p = address(args.address), data = p.readByteArray(args.max_bytes);
+    return { address: p.toString(), bytes_hex: data ? Array.from(new Uint8Array(data), (n) => n.toString(16).padStart(2, "0")).join("") : "", observed: true };
+  }
+  if (args.action === "write") {
+    const p = address(args.address, "w"), pairs = args.bytes_hex.match(/../g) || [];
+    p.writeByteArray(pairs.map((s) => parseInt(s, 16)));
+    return { address: p.toString(), bytes_written: pairs.length, performed: true };
+  }
+  if (args.action === "call") {
+    const allocated = [], fn = new NativeFunction(target(args), args.return_type, args.argument_types);
+    const result = fn(...args.arguments.map((v, i) => argument(v, args.argument_types[i], allocated)));
+    const temporaryCount = allocated.length;
+    return { value: returned(result), performed: true, temporary_arguments: temporaryCount };
+  }
+  if (args.action === "trace") {
+    if (hooks2.size >= 16)
+      throw new Error("Native trace limit reached");
+    if ([...args.argument_types, args.return_type].some((t) => t === "float" || t === "double"))
+      throw new Error("Floating point trace arguments require LLDB/SIMD context; no integer-register decoding is attempted");
+    const id = state.session + ".native_hook." + ++serial2;
+    let count = 0, last = 0;
+    const listener = Interceptor.attach(target(args), {
+      onEnter(values) {
+        const now = Date.now();
+        this.report = !state.disposing && count < args.max_events && now - last >= 1e3 / args.rate_limit;
+        if (!this.report)
+          return;
+        count++;
+        last = now;
+        send({
+          type: "native_call",
+          hook_id: id,
+          thread_id: this.threadId,
+          arguments: args.argument_types.map((t, i) => registerValue(values[i], t))
+        });
+      },
+      onLeave(value) {
+        if (this.report)
+          send({ type: "native_return", hook_id: id, thread_id: this.threadId, value: registerValue(value, args.return_type) });
+      }
+    });
+    hooks2.set(id, listener);
+    return { hook_id: id, active: true };
+  }
+  if (args.action === "untrace") {
+    const hook2 = hooks2.get(args.hook_id);
+    if (!hook2)
+      throw new Error("Unknown native hook");
+    hook2.detach();
+    hooks2.delete(args.hook_id);
+    return { hook_id: args.hook_id, active: false };
+  }
+  throw new Error("Unsupported native action");
+}
+function dispose4() {
+  for (const hook2 of hooks2.values())
+    hook2.detach();
+  hooks2.clear();
+  exportsCache.clear();
 }
 
 // agents/frida/index.ts
@@ -4538,7 +4932,7 @@ var methods2 = {
   list_hooks: listHooks,
   enable_hook: enable,
   windows,
-  snapshot,
+  snapshot: snapshot2,
   inspect_view: inspectView,
   constraints,
   responders,
@@ -4546,6 +4940,7 @@ var methods2 = {
   find_views: findViews,
   screenshot,
   capture,
+  touch_target: touchTarget,
   release_leases: objectStats,
   search_classes: searchClasses,
   dump_class: dumpClass,
@@ -4584,6 +4979,17 @@ rpc.exports = {
       }
       if (!state.session)
         throw new Error("Initialize the process session first");
+      if (name === "swift_capabilities")
+        return {
+          available: Process.arch === "arm64" && Process.platform === "darwin" && !!Process.findModuleByName("libswiftCore.dylib"),
+          bridge: "frida-swift-bridge",
+          experimental: true,
+          default_images: [Process.mainModule.name, "libswiftCore.dylib"],
+          actions: ["types", "inspect", "call", "trace", "untrace", "release", "reset"],
+          limitations: ["Bounded explicitly selected Mach-O images", "Generic/async/stripped signatures may be unsupported", "No automatic pure-Swift heap enumeration", "Struct storage is borrowed; no persistent value handles"]
+        };
+      if (name === "native_runtime")
+        return args.main_thread ? await main(() => run3(args)) : run3(args);
       if (name === "app_logs")
         return await run2(args);
       if (name === "debug_inspect")
@@ -4635,6 +5041,7 @@ rpc.exports = {
         leaseTimer = null;
         dispose2();
         dispose3();
+        dispose4();
         if (state.objects.size)
           await main(() => releaseObjects());
         return { disposed: true };

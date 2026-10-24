@@ -34,3 +34,19 @@ The copied license is in `agents/frida/vendor/frida-ios-dump.LICENSE` and
 Vesper adapts module selection, lazy invocation, private temporary files, size
 bounds, session reuse and verified SFTP transfer. It does not force framework
 loading or package an IPA. Apple debugserver and classdumpc are not bundled.
+
+The separate, lazy `assets/swift-agent.js` bundles
+[`frida-swift-bridge` 3.0.2](https://github.com/frida/frida-swift-bridge)
+(Apache-2.0, Abdelrahman Eid and contributors) and the Objective-C bridge noted
+above. The Apache license is shipped as
+`assets/licenses/frida-swift-bridge-Apache-2.0.txt`. Vesper modifies the Swift
+bridge during agent compilation using `scripts/prepare_swift_bridge.py`: remove
+eager initialization and whole-process metadata/conformance scans, and add an
+explicit bounded image scope. The readable patched code is in the bundled asset;
+`npm ci && npm run build` recreates it from the pinned upstream dependency.
+
+[ZXTouch Rootless](https://github.com/Epic0001/zxtouchrootless) is an optional
+external GPL-3.0 input service, not bundled or linked into Vesper. The SSH
+protocol client is independently implemented from the published task/framing
+protocol. No upstream ZXTouch implementation code or device package is copied
+into this repository. Install the device component separately only when needed.

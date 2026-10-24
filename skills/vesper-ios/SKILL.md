@@ -1,6 +1,6 @@
 ---
 name: vesper-ios
-description: Use Vesper for iOS reverse engineering, UIKit automation, live Objective-C values, decryption plus classdumpc/IDA, SSH tweak builds and installation, and LLDB/Frida/log debugging.
+description: Use Vesper for iOS reverse engineering, UIKit/SwiftUI automation, Swift and native runtime values, decryption plus classdumpc/IDA, SSH tweak builds and installation, and LLDB/Frida/log debugging.
 ---
 
 # Vesper iOS
@@ -46,10 +46,17 @@ build commands, read [references/ssh-tweaks.md](references/ssh-tweaks.md).
   without scanning the heap. Use class-name discovery only when no handle exists.
   Request controllers, constraints, targets or nested values only as needed.
 
-UIKit operations run on the main thread. This backend dispatches control and
-accessibility actions, navigation and scroll offsets; it does not inject raw HID
-touches. Use an available app action for a gesture-only view. Keep the existing
-Frida deployment; do not install VNC or another screen-control service by default.
+UIKit operations and object cleanup run on the main thread. `backend="auto"`
+supplements SwiftUI hosting views with accessibility nodes; `"accessibility"`
+selects the semantic tree and its activate/adjust/escape/scroll actions.
+For pure Swift values/calls/hooks use advanced `swift_runtime`; for C/C++ use
+`runtime_native` with explicit types/offsets. Both reuse the app session and return
+bounded selected data. Swift is lazy and scoped to chosen Mach-O images.
+`swipe`, `long_press` and multifinger `gesture` use optional SSH ZXTouch input;
+raw coordinates need no Frida attach. Missing input support returns installation
+instructions through `input_setup`. Read
+[references/swift-native-input.md](references/swift-native-input.md) only when
+these backends are needed. Keep the existing Frida deployment; do not add VNC.
 
 ## Metadata and analysis
 

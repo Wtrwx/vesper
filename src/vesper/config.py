@@ -25,6 +25,7 @@ class DeviceConfig(StrictModel):
     jailbreak_prefix: str | None = None
     debugserver_path: str | None = None
     debugserver_port: int = Field(default=12345, ge=1024, le=65535)
+    touch_port: int = Field(default=6000, ge=1024, le=65535)
     staging_directory: str = "/tmp/vesper"
     download_roots: list[str] = Field(default_factory=lambda: ["/tmp/vesper"])
     crash_roots: list[str] = Field(default_factory=lambda: ["/var/mobile/Library/Logs/CrashReporter", "/Library/Logs/CrashReporter"])

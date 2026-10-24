@@ -1,6 +1,7 @@
 import ObjC from "frida-objc-bridge";
 import { Args, array, finishObjectLease, main, objectFor, objectId, state, withObjectLease } from "./common.js";
 import * as ui from "./ui_inspector.js";
+import * as accessibility from "./accessibility.js";
 
 function kind(value: any, name: string): boolean {
   return !!value && !value.handle.isNull() && !!ObjC.classes[name] && !!value.isKindOfClass_(ObjC.classes[name]);
@@ -13,6 +14,11 @@ function windowFor(args: Args): ObjC.Object {
   return objectFor(item.view_id);
 }
 function actionable(view: ObjC.Object, interaction = true): void {
+  if (accessibility.isElement(view)) {
+    const frame = accessibility.frame(view);
+    if (frame.width <= 0 || frame.height <= 0) throw new Error("Accessibility target has no visible frame");
+    return;
+  }
   if (!kind(view, "UIView") || !present(view.window())) throw new Error("Target is not an attached UIView");
   const box = view.convertRect_toView_(view.bounds(), view.window()), bounds = view.window().bounds();
   if (Number(box[1][0]) <= 0 || Number(box[1][1]) <= 0 || Number(box[0][0]) + Number(box[1][0]) <= Number(bounds[0][0]) ||
@@ -47,8 +53,15 @@ function resolve(target: Args, allowMissing = false, interaction = true): ObjC.O
   const view = objectFor(found[index ?? 0].view_id); actionable(view, interaction); return view;
 }
 
-// These are UIKit semantic operations. They do not synthesize private UITouch/
-// HID events, so arbitrary gesture recognizers are deliberately unsupported.
+export function touchTarget(args: Args): Args {
+  const view = resolve({ ...args.target, backend: args.backend }, false, false)!;
+  const bounds = accessibility.frame(view);
+  return { point: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
+    frame: bounds, view_id: objectId(view), coordinate_space: "screen UIKit points" };
+}
+
+// Semantic operations remain on UIKit's main queue. Physical gestures are
+// routed separately through the host's optional SSH input backend.
 export function step(args: Args): Args {
   if (state.disposing) throw new Error("Process session is disposing; remaining actions were cancelled");
   const action = args.action;
@@ -78,11 +91,17 @@ export function step(args: Args): Args {
     }
     throw new Error("No navigation or modal transition can go back from this controller");
   }
-  const target = args.target || {};
+  const target = { ...args.target, backend: args.backend };
   let view = resolve(target, action === "wait_for", action !== "wait_for" && action !== "assert" && action !== "tap");
   if (!view) return { action, matched: false };
   const viewId = objectId(view);
   if (action === "assert" || action === "wait_for") return { action, matched: true, view_id: viewId };
+  if (action === "accessibility") return accessibility.act(view, args.operation, args.direction);
+  if (accessibility.isElement(view)) {
+    if (action === "tap") return accessibility.act(view, "activate");
+    if (action === "scroll") return accessibility.act(view, "scroll", (args.dy || args.pages || 0) >= 0 ? "down" : "up");
+    throw new Error("This accessibility element requires a semantic action or the touch backend");
+  }
   if (action === "tap") {
     for (let i = 0; i < 32 && present(view); i++, view = view!.superview()) {
       // A gesture-only control can reach its window without finding an action.
@@ -150,7 +169,7 @@ export async function run(args: Args): Promise<Args> {
       try {
         let result: Args;
         do {
-          result = await main(() => withObjectLease(lease, () => step(item)));
+          result = await main(() => withObjectLease(lease, () => step({ ...item, backend: args.backend })));
           if (item.action !== "wait_for" || result.matched || Date.now() - begin >= item.timeout_ms) break;
           await new Promise(resolve => setTimeout(resolve, Math.min(item.poll_ms, item.timeout_ms - (Date.now() - begin))));
         } while (!state.disposing);
@@ -163,7 +182,7 @@ export async function run(args: Args): Promise<Args> {
         break; // Never retry a mutation whose outcome may be uncertain.
       }
     }
-    const capture = args.after_capture !== "none" && !state.disposing ?
+    const capture = !results.some(s => s.error) && args.after_capture !== "none" && !state.disposing ?
       await main(() => withObjectLease(lease, () => ui.capture({ ...args, mode: args.after_capture }))) : {};
     return { steps: results, completed: results.length === args.steps.length && !results.some(s => s.error),
       elapsed_ms: Date.now() - started, ...capture };

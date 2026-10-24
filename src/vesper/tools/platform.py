@@ -40,4 +40,4 @@ def register(app: Application) -> None:
                 retryable=result.error.retryable, **result.error.details)
         return result.data or {}
 
-    app.tools.add('platform_tool', Invoke, invoke, 'Access advanced Vesper primitives without loading the full catalog. action=schema returns one exact input schema; action=call validates and executes arguments. Names include objc_get_ivars, objc_get_methods, ui_inspect_view, tweak_*, ida_* and device_*. Existing operation checks apply. Use the vesper-ios skill for workflows.', read_only=False)
+    app.tools.add('platform_tool', Invoke, invoke, 'Access advanced Vesper primitives without loading the full catalog. action=schema returns one exact input schema; action=call validates and executes arguments. Names include swift_runtime, runtime_native, input_setup, objc_get_ivars, ui_inspect_view, tweak_*, ida_* and device_*. Existing operation checks apply. Use the vesper-ios skill for workflows.', read_only=False)
